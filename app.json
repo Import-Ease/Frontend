@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "ImportEase",
+    "slug": "importease",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.importease.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundColor": "#0B2C56"
+      },
+      "package": "com.importease.app"
+    },
+    "plugins": [
+      "expo-asset",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/logo.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#F5F8FF",
+          "dark": {
+            "image": "./assets/logo.png",
+            "backgroundColor": "#0B2C56"
+          }
+        }
+      ]
+    ]
+  }
+}
