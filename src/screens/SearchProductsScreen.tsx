@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     FlatList,
     Image,
     StyleSheet,
@@ -41,7 +42,8 @@ export default function SearchProductsScreen() {
         try {
             const data = await searchProducts(trimmed);
             setResults(Array.isArray(data) ? data : []);
-        } catch {
+        } catch (err: any) {
+            Alert.alert('Search failed', err?.message || 'Could not search products. Please try again.');
             setResults([]);
         } finally {
             setLoading(false);

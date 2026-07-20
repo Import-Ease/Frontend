@@ -63,7 +63,8 @@ export default function MyProductsScreen() {
         try {
             const data = await fetchMyProducts(token);
             setProducts(Array.isArray(data) ? data : []);
-        } catch {
+        } catch (err: any) {
+            Alert.alert('Failed to load products', err?.message || 'Please try again.');
             setProducts([]);
         } finally {
             setLoading(false);
@@ -77,7 +78,7 @@ export default function MyProductsScreen() {
             const info = await fetchMyProductCount(token);
             setTierInfo(info);
         } catch {
-            // ignore — tier info is optional
+            // tier info is supplementary — don't block the user
         }
     }, []);
 

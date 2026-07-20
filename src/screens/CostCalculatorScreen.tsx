@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Switch,
@@ -120,8 +121,8 @@ export default function CostCalculatorScreen() {
         insurance,
       });
       setResult(res);
-    } catch {
-      // keep previous result on error
+    } catch (err: any) {
+      Alert.alert('Calculation failed', err?.message || 'Could not calculate cost. Please try again.');
     } finally {
       setLoading(false);
     }
