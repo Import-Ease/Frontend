@@ -16,6 +16,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppTheme, FontSize, Radius, Space, CardShadow } from '../theme';
 import { RootStackParamList } from '../types';
 import { Eyebrow } from '../components';
+import { ChevronLeftIcon } from '../components/Icons';
+import { createShipment } from '../services/api';
 
 const GOODS_TYPES = ['General goods', 'Electronics', 'Cold chain', 'Textiles', 'Machinery', 'Construction', 'Pharmaceuticals'];
 const CARRIERS = ['Maersk Line', 'MSC Cargo', 'Hapag-Lloyd', 'COSCO Shipping', 'Evergreen Marine', 'CMA CGM', 'Other'];
@@ -97,10 +99,10 @@ function ChipSelect({ options, value, onChange, colors }: ChipSelectProps) {
                 <TouchableOpacity
                     key={opt}
                     onPress={() => onChange(opt)}
-                    style={[s.chip, { backgroundColor: active ? colors.cobaltDim : colors.surfaceAlt }]}
+                    style={[s.chip, { backgroundColor: active ? colors.cobalt : colors.surfaceAlt, borderWidth: active ? 0 : 1, borderColor: colors.border }]}
                     activeOpacity={0.8}
                 >
-                  <Text style={[s.chipText, { color: active ? colors.cobalt : colors.muted }]}>{opt}</Text>
+                  <Text style={[s.chipText, { color: active ? '#FFFFFF' : colors.muted }]}>{opt}</Text>
                 </TouchableOpacity>
             );
           })}
@@ -117,14 +119,37 @@ export default function AddShipmentScreen() {
   const set = <K extends keyof FormState>(key: K, val: FormState[K]) =>
       setForm((f) => ({ ...f, [key]: val }));
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.trackingId || !form.description || !form.origin || !form.eta) {
       Alert.alert('A few things are missing', 'Please fill in the tracking ID, description, origin, and ETA so we can track it properly.');
       return;
     }
-    Alert.alert('Added! 🎉', `${form.trackingId} is now on your dashboard.`, [
-      { text: 'Nice', onPress: () => navigation.goBack() },
-    ]);
+
+    try {
+      const token = (globalThis as any).__IMPORT_EASE_TOKEN__;
+      if (!token) {
+        Alert.alert('Not signed in', 'Please log in before adding a shipment.');
+        return;
+      }
+
+      const payload = {
+        trackingId: form.trackingId,
+        description: form.description,
+        goodsType: form.goodsType || 'General goods',
+        carrier: form.carrier === 'Other' ? form.carrierCustom || form.carrier : form.carrier,
+        originPort: form.origin,
+        destinationPort: 'Tema, GH',
+        weightKg: Number(form.weight || 0),
+        estimatedTimeOfArrival: form.eta,
+      };
+
+      await createShipment(payload, token);
+      Alert.alert('Shipment added', `${form.trackingId} is now on your dashboard.`, [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    } catch (error: any) {
+      Alert.alert('Could not save shipment', error?.message || 'Please try again.');
+    }
   };
 
   return (
@@ -136,8 +161,9 @@ export default function AddShipmentScreen() {
             keyboardShouldPersistTaps="handled"
         >
           <View style={s.headerRow}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn} activeOpacity={0.7}>
-              <Text style={[s.backText, { color: colors.cobalt }]}>← Back</Text>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={[s.backBtn, { backgroundColor: colors.surfaceAlt }]} activeOpacity={0.7}>
+              <ChevronLeftIcon size={18} color={colors.cobalt} />
+              <Text style={[s.backText, { color: colors.cobalt }]}>Back</Text>
             </TouchableOpacity>
           </View>
 
@@ -217,7 +243,7 @@ const s = StyleSheet.create({
   content: { padding: Space.lg, paddingBottom: 60 },
 
   headerRow: { marginBottom: Space.sm },
-  backBtn: { alignSelf: 'flex-start', paddingVertical: 4 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 12, borderRadius: Radius.pill },
   backText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.sm },
 
   pageTitle: { fontFamily: 'Poppins_700Bold', fontSize: FontSize.xxl, marginTop: 4 },

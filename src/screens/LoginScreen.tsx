@@ -14,8 +14,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useAppTheme, FontSize, Radius, Space, CardShadow, AppColors } from '../theme';
+import { useAppTheme, FontSize, Radius, Space, CardShadow } from '../theme';
 import { RootStackParamList } from '../types';
+import { MailIcon, PhoneIcon, EyeIcon, EyeOffIcon, ShieldIcon } from '../components/Icons';
+import { loginUser, registerUser } from '../services/api';
 
 type Mode = 'login' | 'signup';
 type Method = 'email' | 'phone';
@@ -26,49 +28,34 @@ export default function LoginScreen() {
 
     const [mode, setMode] = useState<Mode>('login');
     const [method, setMethod] = useState<Method>('email');
+    const [username, setUsername] = useState('');
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
     const [confirm, setConfirm] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [role, setRole] = useState<'IMPORTER' | 'SUPPLIER'>('IMPORTER');
 
     const isLogin = mode === 'login';
     const isEmail = method === 'email';
 
+    const [submitting, setSubmitting] = useState(false);
 
-    const handleLogin = () => {
-        if (email.toLowerCase() === 'admin@importease.com') {
-            // If admin, go to hidden dashboard
-            navigation.replace('AdminDashboard');
-        } else {
-            // If regular user, go to normal app
-            navigation.replace('Main');
-        }
-    };
-
-    // Add this state inside LoginScreen
-    const [tapCount, setTapCount] = useState(0);
-
-    const handleLogoTap = () => {
-        const newCount = tapCount + 1;
-        setTapCount(newCount);
-        if (newCount >= 5) {
-            setTapCount(0);
-            navigation.navigate('AdminDashboard');
-        }
-    };
-
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!isLogin && !name.trim()) {
             Alert.alert('Missing info', 'Please enter your full name.');
             return;
         }
-        if (isEmail && !email.trim()) {
+        if (isLogin && !username.trim()) {
+            Alert.alert('Missing info', 'Please enter your username or email address.');
+            return;
+        }
+        if (!isLogin && isEmail && !email.trim()) {
             Alert.alert('Missing info', 'Please enter your email address.');
             return;
         }
-        if (!isEmail && !phone.trim()) {
+        if (!isLogin && !isEmail && !phone.trim()) {
             Alert.alert('Missing info', 'Please enter your phone number.');
             return;
         }
@@ -80,7 +67,38 @@ export default function LoginScreen() {
             Alert.alert("Passwords don't match", 'Please make sure both passwords are the same.');
             return;
         }
-        navigation.replace('Main');
+
+        setSubmitting(true);
+        try {
+            if (isLogin) {
+                const authRes = await loginUser(username.trim(), password.trim());
+                if (!authRes?.accessToken) {
+                    Alert.alert('Login failed', 'The server did not return a valid token.');
+                    return;
+                }
+                (globalThis as any).__IMPORT_EASE_TOKEN__ = authRes.accessToken;
+                (globalThis as any).__IMPORT_EASE_USERNAME__ = authRes.username || username.trim();
+                (globalThis as any).__IMPORT_EASE_ROLE__ = authRes.role || 'IMPORTER';
+                navigation.replace('Main');
+            } else {
+                const emailAddr = isEmail ? email.trim() : `${phone.trim()}@importease.local`;
+                const displayName = name.trim() || emailAddr.split('@')[0];
+                const authRes = await registerUser(displayName, emailAddr, password.trim(), role);
+                if (!authRes?.accessToken) {
+                    Alert.alert('Signup failed', 'The server did not return a valid token.');
+                    return;
+                }
+                (globalThis as any).__IMPORT_EASE_TOKEN__ = authRes.accessToken;
+                (globalThis as any).__IMPORT_EASE_EMAIL__ = emailAddr;
+                (globalThis as any).__IMPORT_EASE_USERNAME__ = displayName;
+                (globalThis as any).__IMPORT_EASE_ROLE__ = authRes.role || role;
+                navigation.replace('Main');
+            }
+        } catch (error: any) {
+            Alert.alert('Error', error?.message || 'Something went wrong. Please try again.');
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     return (
@@ -126,41 +144,61 @@ export default function LoginScreen() {
                                 Sign up
                             </Text>
                         </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.modeBtn}
-                            onPress={handleLogoTap}
-                            activeOpacity={0.8}
-                        >
-                            <Text style={[styles.modeBtnText, { color: isLogin ? colors.white : colors.muted }]}>
-                                Admin
-                            </Text>
-                        </TouchableOpacity>
                     </View>
+
+                    {/* ── Admin entry ── */}
+                    <TouchableOpacity
+                        style={[styles.adminBtn, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+                        onPress={() => navigation.navigate('AdminLogin')}
+                        activeOpacity={0.7}
+                    >
+                        <ShieldIcon size={14} color={colors.orange} />
+                        <Text style={[styles.adminBtnText, { color: colors.orange }]}>Admin</Text>
+                    </TouchableOpacity>
 
                     {/* ── Form card ── */}
                     <View style={[styles.card, { backgroundColor: colors.card }]}>
 
-                        {/* Method toggle */}
-                        <View style={[styles.methodRow, { borderBottomColor: colors.border }]}>
-                            <TouchableOpacity
-                                style={[styles.methodBtn, isEmail && { borderBottomColor: colors.navy, borderBottomWidth: 2 }]}
-                                onPress={() => setMethod('email')}
-                                activeOpacity={0.8}
-                            >
-                                <Text style={[styles.methodText, { color: isEmail ? colors.navy : colors.muted }]}>
-                                    📧 Email
-                                </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.methodBtn, !isEmail && { borderBottomColor: colors.navy, borderBottomWidth: 2 }]}
-                                onPress={() => setMethod('phone')}
-                                activeOpacity={0.8}
-                            >
-                                <Text style={[styles.methodText, { color: !isEmail ? colors.navy : colors.muted }]}>
-                                    📱 Phone
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
+                        {/* Method toggle — sign up only */}
+                        {!isLogin && (
+                            <View style={[styles.methodRow, { borderBottomColor: colors.border }]}>
+                                <TouchableOpacity
+                                    style={[styles.methodBtn, isEmail && { borderBottomColor: colors.navy, borderBottomWidth: 2 }]}
+                                    onPress={() => setMethod('email')}
+                                    activeOpacity={0.8}
+                                >
+                                    <MailIcon size={14} color={isEmail ? colors.navy : colors.muted} />
+                                    <Text style={[styles.methodText, { color: isEmail ? colors.navy : colors.muted }]}>
+                                        Email
+                                    </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.methodBtn, !isEmail && { borderBottomColor: colors.navy, borderBottomWidth: 2 }]}
+                                    onPress={() => setMethod('phone')}
+                                    activeOpacity={0.8}
+                                >
+                                    <PhoneIcon size={14} color={!isEmail ? colors.navy : colors.muted} />
+                                    <Text style={[styles.methodText, { color: !isEmail ? colors.navy : colors.muted }]}>
+                                        Phone
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                        {/* Username or Email — login only */}
+                        {isLogin && (
+                            <View style={styles.fieldWrap}>
+                                <Text style={[styles.label, { color: colors.muted }]}>Username or email</Text>
+                                <TextInput
+                                    value={username}
+                                    onChangeText={setUsername}
+                                    placeholder="Enter username or email"
+                                    placeholderTextColor={colors.caption}
+                                    autoCapitalize="none"
+                                    style={[styles.input, { backgroundColor: colors.surfaceAlt, color: colors.text }]}
+                                />
+                            </View>
+                        )}
 
                         {/* Full name — sign up only */}
                         {!isLogin && (
@@ -177,8 +215,8 @@ export default function LoginScreen() {
                             </View>
                         )}
 
-                        {/* Email or Phone */}
-                        {isEmail ? (
+                        {/* Email or Phone — sign up only */}
+                        {!isLogin && (isEmail ? (
                             <View style={styles.fieldWrap}>
                                 <Text style={[styles.label, { color: colors.muted }]}>Email address</Text>
                                 <TextInput
@@ -195,8 +233,8 @@ export default function LoginScreen() {
                             <View style={styles.fieldWrap}>
                                 <Text style={[styles.label, { color: colors.muted }]}>Phone number</Text>
                                 <View style={styles.phoneRow}>
-                                    <View style={[styles.phonePrefix, { backgroundColor: colors.surfaceAlt }]}>
-                                        <Text style={[styles.phonePrefixText, { color: colors.text }]}>🇬🇭 +233</Text>
+                                    <View style={[styles.phonePrefix, { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border }]}>
+                                        <Text style={[styles.phonePrefixText, { color: colors.text }]}>GH +233</Text>
                                     </View>
                                     <TextInput
                                         value={phone}
@@ -208,7 +246,7 @@ export default function LoginScreen() {
                                     />
                                 </View>
                             </View>
-                        )}
+                        ))}
 
                         {/* Password */}
                         <View style={styles.fieldWrap}>
@@ -227,7 +265,11 @@ export default function LoginScreen() {
                                     style={styles.eyeBtn}
                                     activeOpacity={0.7}
                                 >
-                                    <Text style={{ fontSize: 18 }}>{showPassword ? '🙈' : '👁️'}</Text>
+                                    {showPassword ? (
+                                      <EyeOffIcon size={18} color={colors.muted} />
+                                    ) : (
+                                      <EyeIcon size={18} color={colors.muted} />
+                                    )}
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -247,6 +289,33 @@ export default function LoginScreen() {
                             </View>
                         )}
 
+                        {/* Role selector — sign up only */}
+                        {!isLogin && (
+                            <View style={styles.fieldWrap}>
+                                <Text style={[styles.label, { color: colors.muted }]}>I am a</Text>
+                                <View style={[styles.roleRow, { backgroundColor: colors.surfaceAlt }]}>
+                                    <TouchableOpacity
+                                        style={[styles.roleBtn, role === 'IMPORTER' && { backgroundColor: colors.navy }]}
+                                        onPress={() => setRole('IMPORTER')}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Text style={[styles.roleBtnText, { color: role === 'IMPORTER' ? colors.white : colors.muted }]}>
+                                            Importer
+                                        </Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.roleBtn, role === 'SUPPLIER' && { backgroundColor: colors.navy }]}
+                                        onPress={() => setRole('SUPPLIER')}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Text style={[styles.roleBtnText, { color: role === 'SUPPLIER' ? colors.white : colors.muted }]}>
+                                            Supplier
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        )}
+
                         {/* Forgot password — login only */}
                         {isLogin && (
                             <TouchableOpacity
@@ -262,10 +331,15 @@ export default function LoginScreen() {
                         <TouchableOpacity
                             style={[styles.submitBtn, { backgroundColor: colors.navy }]}
                             onPress={handleSubmit}
+                            disabled={submitting}
                             activeOpacity={0.88}
                         >
                             <Text style={[styles.submitText, { color: colors.white }]}>
-                                {isLogin ? 'Log in' : 'Create account'}
+                                {submitting
+                                    ? isLogin ? 'Logging in…' : 'Creating account…'
+                                    : isLogin
+                                        ? 'Log in'
+                                        : 'Create account'}
                             </Text>
                         </TouchableOpacity>
 
@@ -294,7 +368,6 @@ export default function LoginScreen() {
     );
 }
 
-// ── Styles — no colors here, all passed inline above ──
 const styles = StyleSheet.create({
     safe: { flex: 1 },
     scroll: { padding: Space.lg, paddingBottom: 40 },
@@ -308,15 +381,27 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         borderRadius: Radius.pill,
         padding: 4,
-        marginBottom: Space.lg,
+        marginBottom: Space.sm,
     },
     modeBtn: { flex: 1, paddingVertical: 10, borderRadius: Radius.pill, alignItems: 'center' },
     modeBtnText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.sm },
 
+    adminBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        borderRadius: Radius.pill,
+        paddingVertical: 9,
+        marginBottom: Space.lg,
+        borderWidth: 1,
+    },
+    adminBtnText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.xs, letterSpacing: 0.3 },
+
     card: { borderRadius: Radius.lg, padding: Space.md, marginBottom: Space.md, ...CardShadow },
 
     methodRow: { flexDirection: 'row', marginBottom: Space.md, borderBottomWidth: 1 },
-    methodBtn: { flex: 1, alignItems: 'center', paddingBottom: 10, marginBottom: -1 },
+    methodBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingBottom: 10, marginBottom: -1 },
     methodText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.sm },
 
     fieldWrap: { marginBottom: Space.md },
@@ -333,6 +418,10 @@ const styles = StyleSheet.create({
     phonePrefix: { borderRadius: Radius.md, paddingHorizontal: Space.md, justifyContent: 'center' },
     phonePrefixText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.sm },
     phoneInput: { flex: 1 },
+
+    roleRow: { flexDirection: 'row', borderRadius: Radius.pill, padding: 4 },
+    roleBtn: { flex: 1, paddingVertical: 10, borderRadius: Radius.pill, alignItems: 'center' },
+    roleBtnText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.sm },
 
     passwordRow: { flexDirection: 'row', alignItems: 'center', borderRadius: Radius.md, paddingRight: Space.sm },
     passwordInput: { flex: 1 },

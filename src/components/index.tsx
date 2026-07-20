@@ -8,8 +8,10 @@ import {
   View,
 } from 'react-native';
 import { useAppTheme, FontSize, Radius, Space } from '../theme';
-import { STAGES } from '../data/shipments';
 import { ShipmentAlert, ShipmentCosts, ShipmentStatus } from '../types';
+import { AlertTriangleIcon, InfoIcon, CheckIcon } from './Icons';
+
+const STAGES: string[] = ['Origin', 'Transit', 'At Port', 'Customs', 'Delivered'];
 
 /* ── STATUS BADGE ─────────────────────────────────────── */
 interface StatusBadgeProps {
@@ -46,7 +48,7 @@ interface EyebrowProps {
 export function Eyebrow({ children, color, size = FontSize.xs }: EyebrowProps) {
   const { colors } = useAppTheme();
   return (
-      <Text style={{ fontFamily: 'Nunito_700Bold', fontSize: size, color: color ?? colors.muted, letterSpacing: 0.3 }}>
+      <Text style={{ fontFamily: 'Nunito_700Bold', fontSize: size, color: color ?? colors.muted, letterSpacing: 0.3, textTransform: 'uppercase' }}>
         {children}
       </Text>
   );
@@ -108,10 +110,10 @@ export function FreightRail({ stageIndex, status }: FreightRailProps) {
                       style={[
                         rail.nodeOuter,
                         { backgroundColor: colors.white, borderColor: colors.border },
-                        (done || curr) && { borderColor: fillColor },
+                        (done || curr) && { borderColor: fillColor, backgroundColor: fillColor + '14' },
                       ]}
                   >
-                    {done && <Text style={{ color: fillColor, fontSize: 9, fontWeight: '700' }}>✓</Text>}
+                    {done && <CheckIcon size={10} color={fillColor} strokeWidth={2.5} />}
                     {curr && <Animated.View style={[rail.nodeDot, { opacity: pulseAnim, backgroundColor: fillColor }]} />}
                   </View>
                   <Text
@@ -144,8 +146,14 @@ export function AlertBanner({ alert }: AlertBannerProps) {
   const tone = isWarn ? colors.green : colors.cobalt;
   const toneDim = isWarn ? colors.greenDim : colors.cobaltDim;
   return (
-      <View style={[styles.alertBox, { backgroundColor: toneDim }]}>
-        <Text style={{ fontSize: 15, marginRight: Space.sm }}>{isWarn ? '👀' : '✨'}</Text>
+      <View style={[styles.alertBox, { backgroundColor: toneDim, borderLeftWidth: 3, borderLeftColor: tone }]}>
+        <View style={{ marginRight: Space.sm, marginTop: 1 }}>
+          {isWarn ? (
+            <AlertTriangleIcon size={16} color={tone} />
+          ) : (
+            <InfoIcon size={16} color={tone} />
+          )}
+        </View>
         <Text style={[styles.alertText, { color: colors.textSoft }]}>{alert.msg}</Text>
       </View>
   );
@@ -202,10 +210,10 @@ export function PrimaryButton({ label, onPress, color, ghost = false }: PrimaryB
   return (
       <TouchableOpacity
           onPress={onPress}
-          style={[styles.btn, { backgroundColor: ghost ? colors.surfaceAlt : (color ?? colors.cobalt) }]}
+          style={[styles.btn, { backgroundColor: ghost ? 'transparent' : (color ?? colors.cobalt), borderWidth: ghost ? 1.5 : 0, borderColor: ghost ? colors.border : undefined }]}
           activeOpacity={0.8}
       >
-        <Text style={[styles.btnText, { color: ghost ? colors.textSoft : colors.white }]}>{label}</Text>
+        <Text style={[styles.btnText, { color: ghost ? colors.muted : colors.white }]}>{label}</Text>
       </TouchableOpacity>
   );
 }
@@ -216,7 +224,7 @@ const styles = StyleSheet.create({
   badgeText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.xs },
   sectionTitle: { fontFamily: 'Poppins_700Bold', fontSize: FontSize.xl, marginTop: 4 },
   sectionSub: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.sm, marginTop: 3 },
-  alertBox: { flexDirection: 'row', alignItems: 'flex-start', borderRadius: Radius.md, padding: Space.md, marginTop: Space.sm },
+  alertBox: { flexDirection: 'row', alignItems: 'flex-start', borderRadius: Radius.sm, padding: Space.md, marginTop: Space.sm },
   alertText: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.sm, lineHeight: 19, flex: 1 },
   costHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Space.sm },
   costTotal: { fontFamily: 'Poppins_700Bold', fontSize: FontSize.md },

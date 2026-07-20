@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Switch,
@@ -12,6 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAppTheme, FontSize, Radius, Space, CardShadow } from '../theme';
 import { Eyebrow } from '../components';
+import { LightbulbIcon } from '../components/Icons';
+import { calculateCost, CalculatorResult } from '../services/api';
 
 const ORIGINS = ['China', 'India', 'Turkey', 'Europe', 'USA'] as const;
 type Origin = (typeof ORIGINS)[number];
@@ -19,23 +22,16 @@ type Origin = (typeof ORIGINS)[number];
 interface GoodsType {
   key: string;
   label: string;
+  apiValue: string;
 }
 
 const GOODS_TYPES: GoodsType[] = [
-  { key: 'general', label: 'General goods' },
-  { key: 'electronics', label: 'Electronics' },
-  { key: 'coldchain', label: 'Cold chain' },
-  { key: 'textiles', label: 'Textiles' },
-  { key: 'machinery', label: 'Machinery' },
+  { key: 'general', label: 'General goods', apiValue: 'general goods' },
+  { key: 'electronics', label: 'Electronics', apiValue: 'electronics' },
+  { key: 'coldchain', label: 'Cold chain', apiValue: 'cold chain' },
+  { key: 'textiles', label: 'Textiles', apiValue: 'general goods' },
+  { key: 'machinery', label: 'Machinery', apiValue: 'general goods' },
 ];
-
-const BASE_SHIPPING: Record<Origin, number> = {
-  China: 2800, India: 2100, Turkey: 1600, Europe: 3200, USA: 4100,
-};
-
-const DUTY_RATES: Record<string, number> = {
-  general: 0.12, electronics: 0.2, coldchain: 0.18, textiles: 0.08, machinery: 0.15,
-};
 
 type SelectOption = string | GoodsType;
 
@@ -61,10 +57,10 @@ function SelectRow({ label, options, value, onChange, colors }: SelectRowProps) 
                   <TouchableOpacity
                       key={key}
                       onPress={() => onChange(key)}
-                      style={[s.optChip, { backgroundColor: active ? colors.cobaltDim : colors.surfaceAlt }]}
+                      style={[s.optChip, { backgroundColor: active ? colors.cobalt : colors.surfaceAlt, borderWidth: active ? 0 : 1, borderColor: colors.border }]}
                       activeOpacity={0.8}
                   >
-                    <Text style={[s.optChipText, { color: active ? colors.cobalt : colors.muted }]}>{lbl}</Text>
+                    <Text style={[s.optChipText, { color: active ? '#FFFFFF' : colors.muted }]}>{lbl}</Text>
                   </TouchableOpacity>
               );
             })}
@@ -102,31 +98,59 @@ export default function CostCalculatorScreen() {
   const { colors } = useAppTheme();
   const [origin, setOrigin] = useState<Origin>('China');
   const [goodsType, setGoodsType] = useState('general');
-  const [weight, setWeight] = useState('1000');
+  const [weight, setWeight] = useState('0');
   const [insurance, setInsurance] = useState(false);
 
-  const { shipping, harbour, duties, transport, ins, total, barItems } = useMemo(() => {
-    const w = parseFloat(weight) || 0;
-    const shippingCost = (BASE_SHIPPING[origin] ?? 2800) + w * 0.15;
-    const harbourCost = 180 + w * 0.02;
-    const dutiesCost = shippingCost * (DUTY_RATES[goodsType] ?? 0.12);
-    const transportCost = 120 + w * 0.03;
-    const insuranceCost = insurance ? (shippingCost + dutiesCost) * 0.02 : 0;
-    const totalCost = shippingCost + harbourCost + dutiesCost + transportCost + insuranceCost;
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<CalculatorResult | null>(null);
 
-    const items = [
-      { label: 'Shipping', val: shippingCost, color: colors.cobalt },
-      { label: 'Harbour', val: harbourCost, color: colors.skyBlue },
-      { label: 'Duties', val: dutiesCost, color: colors.navy },
-      { label: 'Transport', val: transportCost, color: colors.green },
-      ...(insurance ? [{ label: 'Insurance', val: insuranceCost, color: colors.muted }] : []),
-    ];
+  const fetchCost = useCallback(async () => {
+    const w = parseFloat(weight);
+    if (!w || w <= 0) {
+      setResult(null);
+      return;
+    }
+    const goods = GOODS_TYPES.find((g) => g.key === goodsType);
+    setLoading(true);
+    try {
+      const res = await calculateCost({
+        origin,
+        goodsType: goods?.apiValue ?? 'general goods',
+        weightKg: w,
+        insurance,
+      });
+      setResult(res);
+    } catch {
+      // keep previous result on error
+    } finally {
+      setLoading(false);
+    }
+  }, [origin, goodsType, weight, insurance]);
 
-    return { shipping: shippingCost, harbour: harbourCost, duties: dutiesCost, transport: transportCost, ins: insuranceCost, total: totalCost, barItems: items };
-  }, [origin, goodsType, weight, insurance, colors]);
+  useEffect(() => {
+    const timer = setTimeout(fetchCost, 500);
+    return () => clearTimeout(timer);
+  }, [fetchCost]);
 
-  const dutyRatePct = ((DUTY_RATES[goodsType] ?? 0.12) * 100).toFixed(0);
+  const shipping = result?.shipping ?? 0;
+  const harbour = result?.harbour ?? 0;
+  const duties = result?.duties ?? 0;
+  const transport = result?.transport ?? 0;
+  const ins = result?.insurance ?? 0;
+  const total = result?.total ?? 0;
+
+  const barItems = [
+    { label: 'Shipping', val: shipping, color: colors.cobalt },
+    { label: 'Harbour', val: harbour, color: colors.skyBlue },
+    { label: 'Duties', val: duties, color: colors.navy },
+    { label: 'Transport', val: transport, color: colors.green },
+    ...(insurance ? [{ label: 'Insurance', val: ins, color: colors.muted }] : []),
+  ];
+
   const goodsLabel = GOODS_TYPES.find((g) => g.key === goodsType)?.label ?? 'General goods';
+  const dutyRatePct = duties > 0 && shipping > 0
+    ? ((duties / shipping) * 100).toFixed(0)
+    : '10';
 
   return (
       <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]} edges={['top']}>
@@ -155,7 +179,7 @@ export default function CostCalculatorScreen() {
             </View>
 
             <View style={s.switchRow}>
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={[s.switchLabel, { color: colors.text }]}>Add cargo insurance?</Text>
                 <Text style={[s.switchSub, { color: colors.caption }]}>Adds about 2% of freight + duties</Text>
               </View>
@@ -171,26 +195,40 @@ export default function CostCalculatorScreen() {
           <View style={[s.card, { backgroundColor: colors.card, marginTop: Space.sm }]}>
             <Text style={[s.cardTitle, { color: colors.text }]}>Here's the estimate</Text>
 
-            <View style={[s.barWrap, { backgroundColor: colors.surfaceAlt }]}>
-              {barItems.map((b) => (
-                  <View key={b.label} style={[s.barSeg, { flex: b.val, backgroundColor: b.color }]} />
-              ))}
-            </View>
+            {loading ? (
+              <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color={colors.navy} />
+                <Text style={{ fontFamily: 'Nunito_400Regular', fontSize: FontSize.xs, color: colors.muted, marginTop: 8 }}>
+                  Calculating…
+                </Text>
+              </View>
+            ) : (
+              <>
+                <View style={[s.barWrap, { backgroundColor: colors.surfaceAlt }]}>
+                  {barItems.map((b) => (
+                      <View key={b.label} style={[s.barSeg, { flex: b.val || 0.1, backgroundColor: b.color }]} />
+                  ))}
+                </View>
 
-            {barItems.map((b) => (
-                <CostLine key={b.label} label={b.label} val={b.val} color={b.color} colors={colors} />
-            ))}
+                {barItems.map((b) => (
+                    <CostLine key={b.label} label={b.label} val={b.val} color={b.color} colors={colors} />
+                ))}
 
-            <View style={[s.divider, { backgroundColor: colors.border }]} />
-            <CostLine label="Total landed cost" val={total} isTotal colors={colors} />
+                <View style={[s.divider, { backgroundColor: colors.border }]} />
+                <CostLine label="Total landed cost" val={total} isTotal colors={colors} />
+              </>
+            )}
           </View>
 
-          <View style={[s.noteBox, { backgroundColor: colors.surfaceAlt }]}>
+          <View style={[s.noteBox, { backgroundColor: colors.navyDim, borderLeftWidth: 3, borderLeftColor: colors.navy }]}>
+            <View style={s.noteHeader}>
+              <LightbulbIcon size={16} color={colors.navy} />
+              <Text style={[s.noteHeaderText, { color: colors.navy }]}>Estimate only</Text>
+            </View>
             <Text style={[s.noteText, { color: colors.textSoft }]}>
-              💡 The duty rate for <Text style={{ fontFamily: 'Nunito_700Bold', color: colors.text }}>{goodsLabel}</Text> from{' '}
+              The duty rate for <Text style={{ fontFamily: 'Nunito_700Bold', color: colors.text }}>{goodsLabel}</Text> from{' '}
               <Text style={{ fontFamily: 'Nunito_700Bold', color: colors.text }}>{origin}</Text> works out to about{' '}
-              <Text style={{ fontFamily: 'Nunito_700Bold', color: colors.navy }}>{dutyRatePct}%</Text>. This is just an
-              estimate — double-check with GRA before you file.
+              <Text style={{ fontFamily: 'Nunito_700Bold', color: colors.navy }}>{dutyRatePct}%</Text>. Double-check with GRA before you file.
             </Text>
           </View>
         </ScrollView>
@@ -249,5 +287,7 @@ const s = StyleSheet.create({
   divider: { height: 1, marginVertical: Space.sm },
 
   noteBox: { borderRadius: Radius.md, padding: Space.md, marginTop: Space.sm },
+  noteHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  noteHeaderText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.xs },
   noteText: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.xs, lineHeight: 19 },
 });

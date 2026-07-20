@@ -1,4 +1,5 @@
 // theme/index.ts
+import React, { createContext, useContext, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 
 export const LightColors = {
@@ -21,6 +22,8 @@ export const LightColors = {
   limeGreenDim: 'rgba(95, 212, 106, 0.14)',
   skyBlue: '#5B9BD5',
   skyBlueDim: 'rgba(91, 155, 213, 0.12)',
+  orange: '#E8842A',
+  orangeDim: 'rgba(232, 132, 42, 0.12)',
   white: '#FFFFFF',
 
   // Text
@@ -50,6 +53,8 @@ export const DarkColors = {
   limeGreenDim: 'rgba(114, 224, 124, 0.16)',
   skyBlue: '#7AB8F0',
   skyBlueDim: 'rgba(122, 184, 240, 0.14)',
+  orange: '#F09942',
+  orangeDim: 'rgba(240, 153, 66, 0.18)',
   white: '#FFFFFF',
 
   // Text
@@ -94,12 +99,40 @@ export const CardShadow = {
 
 export type AppColors = typeof LightColors;
 
+type ThemeMode = 'light' | 'dark' | 'system';
+
+interface ThemeContextValue {
+  mode: ThemeMode;
+  setMode: (m: ThemeMode) => void;
+  isDark: boolean;
+}
+
+const ThemeContext = createContext<ThemeContextValue>({
+  mode: 'system',
+  setMode: () => {},
+  isDark: false,
+});
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [mode, setMode] = useState<ThemeMode>('system');
+  const scheme = useColorScheme();
+  const isDark = mode === 'system' ? scheme === 'dark' : mode === 'dark';
+  const value = useMemo(() => ({ mode, setMode, isDark }), [mode, isDark]);
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
+export function useThemeMode() {
+  return useContext(ThemeContext);
+}
+
 // Hook — use this anywhere in your app
 export function useAppTheme() {
-  const scheme = useColorScheme(); // 'light' | 'dark' | null
+  const scheme = useColorScheme();
+  const { mode } = useContext(ThemeContext);
+  const resolved = mode === 'system' ? scheme : mode;
   return {
-    colors: scheme === 'dark' ? DarkColors : LightColors,
-    isDark: scheme === 'dark',
-    scheme,
+    colors: resolved === 'dark' ? DarkColors : LightColors,
+    isDark: resolved === 'dark',
+    scheme: resolved,
   };
 }
