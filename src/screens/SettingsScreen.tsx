@@ -80,8 +80,8 @@ export default function SettingsScreen() {
         }, 0);
         setTotalCost(`GHS ${Math.round(total).toLocaleString()}`);
       }
-    } catch {
-      // silently fail
+    } catch (err: any) {
+      Alert.alert('Failed to load data', err?.message || 'Please try again.');
     } finally {
       setLoading(false);
     }
