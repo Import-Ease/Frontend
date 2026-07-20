@@ -1,12 +1,14 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useAppTheme, FontSize, Radius, Space, CardShadow } from '../theme';
-import { SHIPMENTS } from '../data/shipments';
+import { RootStackParamList, Shipment, mapBackendShipment } from '../types';
 import { Eyebrow, PrimaryButton, StatusBadge } from '../components';
-
-const ALERT_SHIPMENTS = SHIPMENTS.filter((s) => s.alert);
+import { AlertTriangleIcon, InfoIcon, CheckCircleIcon, ShieldIcon } from '../components/Icons';
+import { fetchShipments } from '../services/api';
 
 interface EngineStat {
   label: string;
@@ -21,7 +23,35 @@ const ENGINE_STATS: EngineStat[] = [
 ];
 
 export default function AlertsScreen() {
-  const { colors } = useAppTheme(); // ← added
+  const { colors } = useAppTheme();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [loading, setLoading] = useState(true);
+  const [alertShipments, setAlertShipments] = useState<Shipment[]>([]);
+
+  const loadData = useCallback(async () => {
+    const token = (globalThis as any).__IMPORT_EASE_TOKEN__ as string | undefined;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    try {
+      const raw = await fetchShipments(token);
+      const mapped: Shipment[] = raw.map(mapBackendShipment);
+      setAlertShipments(mapped.filter((s) => s.alert !== null));
+    } catch {
+      // silently fail — show empty state
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      setLoading(true);
+      loadData();
+    });
+    return unsubscribe;
+  }, [navigation, loadData]);
 
   return (
       <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]} edges={['top']}>
@@ -33,33 +63,45 @@ export default function AlertsScreen() {
           </View>
 
           {/* count banner */}
-          <View style={[s.countBanner, { backgroundColor: colors.navyDim }]}>
-            <Text style={[s.countNum, { color: colors.navy }]}>{ALERT_SHIPMENTS.length}</Text>
-            <View>
+          <View style={[s.countBanner, { backgroundColor: colors.navyDim, borderLeftWidth: 4, borderLeftColor: colors.navy }]}>
+            <Text style={[s.countNum, { color: colors.navy }]}>{loading ? '—' : alertShipments.length}</Text>
+            <View style={{ flex: 1 }}>
               <Text style={[s.countLabel, { color: colors.text }]}>
-                {ALERT_SHIPMENTS.length === 1 ? 'thing' : 'things'} need your attention
+                {alertShipments.length === 1 ? 'thing' : 'things'} need your attention
               </Text>
               <Text style={[s.countSub, { color: colors.textSoft }]}>Take a look when you get a chance</Text>
             </View>
           </View>
 
-          {ALERT_SHIPMENTS.length === 0 ? (
+          {loading ? (
+              <View style={{ paddingVertical: 60, alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={colors.navy} />
+                <Text style={[s.emptyText, { color: colors.muted, marginTop: Space.md }]}>Loading alerts…</Text>
+              </View>
+          ) : alertShipments.length === 0 ? (
               <View style={s.empty}>
-                <Text style={{ fontSize: 40, marginBottom: 12 }}>🎉</Text>
-                <Text style={[s.emptyText, { color: colors.muted }]}>All clear — every shipment is on track.</Text>
+                <View style={[s.emptyIconWrap, { backgroundColor: colors.greenDim }]}>
+                  <CheckCircleIcon size={40} color={colors.green} strokeWidth={1.5} />
+                </View>
+                <Text style={[s.emptyTitle, { color: colors.text }]}>All clear</Text>
+                <Text style={[s.emptyText, { color: colors.muted }]}>Every shipment is on track.</Text>
               </View>
           ) : (
-              ALERT_SHIPMENTS.map((ship) => {
+              alertShipments.map((ship) => {
                 if (!ship.alert) return null;
                 const isWarn = ship.alert.type === 'warning';
                 const tone = isWarn ? colors.green : colors.cobalt;
                 const toneDim = isWarn ? colors.greenDim : colors.cobaltDim;
                 return (
-                    <View key={ship.id} style={[s.alertCard, { backgroundColor: colors.card }]}>
+                    <View key={ship.id} style={[s.alertCard, { backgroundColor: colors.card, borderLeftWidth: 3, borderLeftColor: tone }]}>
                       <View style={s.alertTop}>
                         <View style={{ flex: 1 }}>
                           <View style={s.alertIdRow}>
-                            <Text style={{ fontSize: 15 }}>{isWarn ? '👀' : '✨'}</Text>
+                            {isWarn ? (
+                              <AlertTriangleIcon size={16} color={tone} />
+                            ) : (
+                              <InfoIcon size={16} color={tone} />
+                            )}
                             <Eyebrow color={colors.navy}>{ship.id}</Eyebrow>
                           </View>
                           <Text style={[s.alertDesc, { color: colors.text }]}>{ship.description}</Text>
@@ -84,9 +126,12 @@ export default function AlertsScreen() {
           {/* engine status panel */}
           <View style={[s.enginePanel, { backgroundColor: colors.surfaceAlt }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: Space.md }}>
-              <Text style={{ fontSize: 16 }}>🛟</Text>
+              <View style={[s.engineIconWrap, { backgroundColor: colors.cobaltDim }]}>
+                <ShieldIcon size={16} color={colors.cobalt} />
+              </View>
               <Text style={[s.engineTitle, { color: colors.textSoft }]}>How alerts work</Text>
               <View style={[s.engineOnline, { backgroundColor: colors.greenDim }]}>
+                <View style={[s.onlineDot, { backgroundColor: colors.green }]} />
                 <Text style={[s.engineOnlineText, { color: colors.green }]}>Active</Text>
               </View>
             </View>
@@ -134,7 +179,7 @@ const s = StyleSheet.create({
   alertIdRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   alertDesc: { fontFamily: 'Poppins_600SemiBold', fontSize: FontSize.md, marginBottom: 6 },
   alertTime: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.xs, marginLeft: Space.sm },
-  alertMsgBox: { borderRadius: Radius.md, padding: Space.sm },
+  alertMsgBox: { borderRadius: Radius.sm, padding: Space.sm },
   alertMsg: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.sm, lineHeight: 19 },
 
   enginePanel: {
@@ -142,13 +187,17 @@ const s = StyleSheet.create({
     padding: Space.md,
     marginTop: Space.lg,
   },
-  engineTitle: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.base },
-  engineOnline: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.pill },
+  engineIconWrap: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  engineTitle: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.base, flex: 1 },
+  engineOnline: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.pill },
+  onlineDot: { width: 6, height: 6, borderRadius: 3 },
   engineOnlineText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.xs },
   engineGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, rowGap: 14 },
   engineStat: { minWidth: '40%' },
   engineStatVal: { fontFamily: 'Poppins_600SemiBold', fontSize: FontSize.base, marginTop: 3 },
 
   empty: { alignItems: 'center', paddingVertical: 60 },
+  emptyIconWrap: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: Space.md },
+  emptyTitle: { fontFamily: 'Poppins_600SemiBold', fontSize: FontSize.base, marginBottom: 4 },
   emptyText: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.sm },
 });
