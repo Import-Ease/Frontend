@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -38,8 +38,8 @@ export default function AlertsScreen() {
       const raw = await fetchShipments(token);
       const mapped: Shipment[] = raw.map(mapBackendShipment);
       setAlertShipments(mapped.filter((s) => s.alert !== null));
-    } catch {
-      // silently fail — show empty state
+    } catch (err: any) {
+      Alert.alert('Failed to load alerts', err?.message || 'Please try again.');
     } finally {
       setLoading(false);
     }
