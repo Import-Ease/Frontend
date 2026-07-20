@@ -12,6 +12,7 @@ import {
   InfoIcon, PackageIcon, AlertTriangleIcon, CheckCircleIcon, BarChartIcon,
 } from '../components/Icons';
 import { fetchShipments, fetchTotalCost, deleteMyAccount } from '../services/api';
+import { clearAuthState } from '../services/storage';
 
 interface StatCardProps {
   icon: React.ReactNode;
@@ -104,10 +105,8 @@ export default function SettingsScreen() {
 
   const maxBar = Math.max(transitCount, customsCount, deliveredCount, portCount, originCount, 1);
 
-  const handleLogout = () => {
-    (globalThis as any).__IMPORT_EASE_TOKEN__ = undefined;
-    (globalThis as any).__IMPORT_EASE_USERNAME__ = undefined;
-    (globalThis as any).__IMPORT_EASE_EMAIL__ = undefined;
+  const handleLogout = async () => {
+    await clearAuthState();
     navigation.getParent<any>()?.replace('Login');
   };
 
@@ -137,10 +136,7 @@ export default function SettingsScreen() {
       await deleteMyAccount(deletePassword.trim(), token);
       setDeleteModalVisible(false);
       setDeletePassword('');
-      (globalThis as any).__IMPORT_EASE_TOKEN__ = undefined;
-      (globalThis as any).__IMPORT_EASE_USERNAME__ = undefined;
-      (globalThis as any).__IMPORT_EASE_EMAIL__ = undefined;
-      (globalThis as any).__IMPORT_EASE_ROLE__ = undefined;
+      await clearAuthState();
     navigation.getParent<any>()?.replace('Login');
   } catch (err: any) {
       console.log('[Settings] deleteMyAccount error:', err?.message, err);

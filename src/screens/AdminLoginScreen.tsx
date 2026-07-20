@@ -18,6 +18,7 @@ import { useAppTheme, FontSize, Radius, Space, CardShadow } from '../theme';
 import { RootStackParamList } from '../types';
 import { EyeIcon, EyeOffIcon, ChevronLeftIcon } from '../components/Icons';
 import { loginUser } from '../services/api';
+import { saveAdminToken } from '../services/storage';
 
 export default function AdminLoginScreen() {
     const { colors } = useAppTheme();
@@ -50,6 +51,7 @@ export default function AdminLoginScreen() {
                 return;
             }
             (globalThis as any).__IMPORT_EASE_ADMIN_TOKEN__ = authRes.accessToken;
+            await saveAdminToken(authRes.accessToken);
             navigation.replace('AdminDashboard');
         } catch (error: any) {
             Alert.alert('Login failed', error?.message || 'Invalid credentials. Please try again.');

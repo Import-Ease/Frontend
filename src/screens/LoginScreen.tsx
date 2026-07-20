@@ -18,6 +18,7 @@ import { useAppTheme, FontSize, Radius, Space, CardShadow } from '../theme';
 import { RootStackParamList } from '../types';
 import { MailIcon, PhoneIcon, EyeIcon, EyeOffIcon, ShieldIcon } from '../components/Icons';
 import { loginUser, registerUser } from '../services/api';
+import { saveAuthState } from '../services/storage';
 
 type Mode = 'login' | 'signup';
 type Method = 'email' | 'phone';
@@ -79,6 +80,11 @@ export default function LoginScreen() {
                 (globalThis as any).__IMPORT_EASE_TOKEN__ = authRes.accessToken;
                 (globalThis as any).__IMPORT_EASE_USERNAME__ = authRes.username || username.trim();
                 (globalThis as any).__IMPORT_EASE_ROLE__ = authRes.role || 'IMPORTER';
+                await saveAuthState({
+                    token: authRes.accessToken,
+                    username: authRes.username || username.trim(),
+                    role: authRes.role || 'IMPORTER',
+                });
                 navigation.replace('Main');
             } else {
                 const emailAddr = isEmail ? email.trim() : `${phone.trim()}@importease.local`;
@@ -92,6 +98,12 @@ export default function LoginScreen() {
                 (globalThis as any).__IMPORT_EASE_EMAIL__ = emailAddr;
                 (globalThis as any).__IMPORT_EASE_USERNAME__ = displayName;
                 (globalThis as any).__IMPORT_EASE_ROLE__ = authRes.role || role;
+                await saveAuthState({
+                    token: authRes.accessToken,
+                    email: emailAddr,
+                    username: displayName,
+                    role: authRes.role || role,
+                });
                 navigation.replace('Main');
             }
         } catch (error: any) {
