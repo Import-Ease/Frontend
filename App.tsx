@@ -10,6 +10,7 @@ import { Nunito_400Regular, Nunito_700Bold } from '@expo-google-fonts/nunito';
 import { useAppTheme, LightColors, ThemeProvider } from './src/theme';
 import { MainTabParamList, RootStackParamList } from './src/types';
 import { PackageIcon, BellIcon, CalculatorIcon, GearIcon, SearchIcon, UserIcon } from './src/components/Icons';
+import { loadAuthState } from './src/services/storage';
 import DashboardScreen from './src/screens/DashboardScreen';
 import AlertsScreen from './src/screens/AlertsScreen';
 import CostCalculatorScreen from './src/screens/CostCalculatorScreen';
@@ -111,6 +112,7 @@ function MainTabs() {
 /* ── ROOT STACK ─────────────────────────────────────────── */
 export default function App() {
     const { colors, isDark } = useAppTheme();
+    const [authReady, setAuthReady] = useState(false);
 
     const [fontsLoaded] = useFonts({
         Poppins_600SemiBold,
@@ -119,7 +121,11 @@ export default function App() {
         Nunito_700Bold,
     });
 
-    if (!fontsLoaded) {
+    useEffect(() => {
+        loadAuthState().finally(() => setAuthReady(true));
+    }, []);
+
+    if (!fontsLoaded || !authReady) {
         return (
             <View style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }}>
                 <ActivityIndicator color={colors.navy} />
