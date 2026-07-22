@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -20,8 +20,9 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppTheme, FontSize, Radius, Space, CardShadow } from '../theme';
 import { RootStackParamList, Product } from '../types';
-import { PlusIcon, PackageIcon } from '../components/Icons';
+import { PlusIcon, PackageIcon, SearchIcon } from '../components/Icons';
 import { fetchMyProducts, createProduct, updateProduct, deleteProduct, fetchMyProductCount, initiateSubscriptionUpgrade } from '../services/api';
+import { pickAndUploadImage } from '../services/cloudinary';
 
 type FormData = {
     productName: string;
@@ -45,6 +46,7 @@ export default function MyProductsScreen() {
 
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [formVisible, setFormVisible] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [form, setForm] = useState<FormData>(EMPTY_FORM);
@@ -64,12 +66,18 @@ export default function MyProductsScreen() {
             const data = await fetchMyProducts(token);
             setProducts(Array.isArray(data) ? data : []);
         } catch (err: any) {
-            Alert.alert('Failed to load products', err?.message || 'Please try again.');
+            setError(err?.message || 'Failed to load products');
             setProducts([]);
         } finally {
             setLoading(false);
         }
     }, []);
+
+    const handleRetry = useCallback(async () => {
+        setError(null);
+        setLoading(true);
+        await loadProducts();
+    }, [loadProducts]);
 
     const loadTierInfo = useCallback(async () => {
         const token = getToken();
@@ -82,7 +90,7 @@ export default function MyProductsScreen() {
         }
     }, []);
 
-    React.useEffect(() => {
+    useEffect(() => {
         const unsubscribe = navigation.addListener('focus', () => {
             setLoading(true);
             loadProducts();
@@ -303,7 +311,14 @@ export default function MyProductsScreen() {
                 )}
 
                 {/* Product list */}
-                {loading ? (
+                {error ? (
+                    <View style={s.centered}>
+                        <Text style={[s.emptyText, { color: colors.muted }]}>{error}</Text>
+                        <TouchableOpacity style={[s.retryBtn, { backgroundColor: colors.cobaltDim, marginTop: Space.md }]} onPress={handleRetry} activeOpacity={0.8}>
+                            <Text style={[s.retryBtnText, { color: colors.cobalt }]}>Retry</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : loading ? (
                     <View style={s.centered}>
                         <ActivityIndicator size="large" color={colors.navy} />
                         <Text style={[s.emptyText, { color: colors.muted, marginTop: Space.md }]}>
@@ -413,16 +428,22 @@ export default function MyProductsScreen() {
                             </View>
 
                             <View style={s.formGroup}>
-                                <Text style={[s.formLabel, { color: colors.muted }]}>Image URL</Text>
-                                <TextInput
-                                    value={form.imageUrl}
-                                    onChangeText={(v) => updateField('imageUrl', v)}
-                                    placeholder="https://example.com/image.jpg"
-                                    placeholderTextColor={colors.caption}
-                                    autoCapitalize="none"
-                                    keyboardType="url"
-                                    style={[s.formInput, { backgroundColor: colors.surfaceAlt, color: colors.text }]}
-                                />
+                                <Text style={[s.formLabel, { color: colors.muted }]}>Product Image</Text>
+                                <TouchableOpacity
+                                    style={[s.imagePickerBtn, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+                                    onPress={async () => {
+                                        const url = await pickAndUploadImage();
+                                        if (url) {
+                                            updateField('imageUrl', url);
+                                        }
+                                    }}
+                                    activeOpacity={0.8}
+                                >
+                                    <SearchIcon size={22} color={colors.caption} />
+                                    <Text style={[s.imagePickerText, { color: colors.caption }]}>
+                                        {form.imageUrl ? 'Change Image' : 'Tap to select image'}
+                                    </Text>
+                                </TouchableOpacity>
                             </View>
 
                             {form.imageUrl ? (
@@ -460,6 +481,8 @@ const s = StyleSheet.create({
     emptyIconWrap: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: Space.md },
     emptyTitle: { fontFamily: 'Poppins_600SemiBold', fontSize: FontSize.base, marginBottom: 4 },
     emptyText: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.sm, textAlign: 'center' },
+    retryBtn: { paddingHorizontal: 24, paddingVertical: 10, borderRadius: Radius.pill },
+    retryBtnText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.sm },
 
     list: { paddingBottom: 40 },
 
@@ -491,6 +514,8 @@ const s = StyleSheet.create({
     formGroup: { marginBottom: Space.md },
     formLabel: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.xs, marginBottom: 6, letterSpacing: 0.3 },
     formInput: { borderRadius: Radius.md, paddingHorizontal: Space.md, paddingVertical: 13, fontFamily: 'Nunito_400Regular', fontSize: FontSize.base },
+    imagePickerBtn: { borderRadius: Radius.md, borderWidth: 1.5, borderStyle: 'dashed', paddingVertical: 24, alignItems: 'center', justifyContent: 'center', gap: 8 },
+    imagePickerText: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.sm },
     formTextarea: { height: 80, textAlignVertical: 'top' },
     formRow: { flexDirection: 'row', gap: Space.md },
 

@@ -351,3 +351,74 @@ export function LockIcon({ size = defaults.size, color = defaults.color, strokeW
     </Svg>
   );
 }
+
+/* ── ARROW LEFT ──────────────────────────────────────── */
+export function ArrowLeftIcon({ size = defaults.size, color = defaults.color, strokeWidth = defaults.strokeWidth }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      <Line x1="19" y1="12" x2="5" y2="12" />
+      <Path d="M12 19l-7-7 7-7" />
+    </Svg>
+  );
+}
+
+/* ── STAR ────────────────────────────────────────────── */
+export function StarIcon({ size = defaults.size, color = defaults.color, strokeWidth = defaults.strokeWidth, filled }: IconProps & { filled?: boolean }) {
+  const fill = filled ? color : 'none';
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      <Polyline points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </Svg>
+  );
+}
+
+/* ── CLOCK ──────────────────────────────────────────── */
+export function ClockIcon({ size = defaults.size, color = defaults.color, strokeWidth = defaults.strokeWidth }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      <Circle cx="12" cy="12" r="10" />
+      <Polyline points="12 6 12 12 16 14" />
+    </Svg>
+  );
+}
+
+/* ── UPLOAD ──────────────────────────────────────────── */
+export function UploadIcon({ size = defaults.size, color = defaults.color, strokeWidth = defaults.strokeWidth }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+      <Polyline points="17 8 12 3 7 8" />
+      <Line x1="12" y1="3" x2="12" y2="15" />
+    </Svg>
+  );
+}
+
+/* ── MAP PIN ─────────────────────────────────────────── */
+export function MapPinIcon({ size = defaults.size, color = defaults.color, strokeWidth = defaults.strokeWidth }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+      <Circle cx="12" cy="10" r="3" />
+    </Svg>
+  );
+}
+
+/* ── CLIPBOARD ───────────────────────────────────────── */
+export function ClipboardIcon({ size = defaults.size, color = defaults.color, strokeWidth = defaults.strokeWidth }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" />
+      <Rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+    </Svg>
+  );
+}
+
+/* ── X ─────────────────────────────────────────────── */
+export function XIcon({ size = defaults.size, color = defaults.color, strokeWidth = defaults.strokeWidth }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      <Line x1="18" y1="6" x2="6" y2="18" />
+      <Line x1="6" y1="6" x2="18" y2="18" />
+    </Svg>
+  );
+}

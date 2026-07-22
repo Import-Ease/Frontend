@@ -55,17 +55,17 @@ describe('Silent error fix — catch blocks have user-facing error feedback', ()
     expect(blockAfter).toMatch(/Alert\.alert\(/);
   });
 
-  it('SettingsScreen catch block shows Alert.alert', () => {
+  it('SettingsScreen catch block shows user-facing error', () => {
     const content = readScreen('SettingsScreen.tsx');
     const catchIndex = content.indexOf('} catch');
     const blockAfter = content.substring(catchIndex, catchIndex + 300);
-    expect(blockAfter).toMatch(/Alert\.alert\(/);
+    expect(blockAfter).toMatch(/(Alert\.alert\(|setError\()/);
   });
 
-  it('MyProductsScreen primary catch shows Alert.alert (tier info catch is intentionally comment-only)', () => {
+  it('MyProductsScreen primary catch shows user-facing error (tier info catch is intentionally comment-only)', () => {
     const content = readScreen('MyProductsScreen.tsx');
     const catchIndex = content.indexOf('} catch');
     const blockAfter = content.substring(catchIndex, catchIndex + 200);
-    expect(blockAfter).toMatch(/Alert\.alert\(/);
+    expect(blockAfter).toMatch(/(Alert\.alert\(|setError\()/);
   });
 });

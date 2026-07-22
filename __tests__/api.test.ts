@@ -1,4 +1,12 @@
-import { calculateCost, searchProducts, fetchShipments } from '../src/services/api';
+import {
+  calculateCost,
+  searchProducts,
+  fetchShipments,
+  getAdminShipmentDetail,
+  getAdminShipmentStages,
+  adminUpdateShipment,
+  advanceShipmentStage,
+} from '../src/services/api';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch as any;
@@ -74,10 +82,15 @@ describe('API error propagation', () => {
   });
 
   describe('fetchShipments', () => {
-    it('throws error on 401 unauthorized', async () => {
+    it('throws session expired on 401 and clears auth', async () => {
+      (globalThis as any).__IMPORT_EASE_TOKEN__ = 'stale-token';
+      (globalThis as any).__IMPORT_EASE_USERNAME__ = 'testuser';
       mockFetch.mockResolvedValueOnce(errorResponse(401, 'Unauthorized'));
 
-      await expect(fetchShipments('bad-token')).rejects.toThrow('Unauthorized');
+      await expect(fetchShipments('bad-token')).rejects.toThrow('Session expired. Please log in again.');
+
+      expect((globalThis as any).__IMPORT_EASE_TOKEN__).toBeUndefined();
+      expect((globalThis as any).__IMPORT_EASE_USERNAME__).toBeUndefined();
     });
 
     it('throws error on 500', async () => {
@@ -131,6 +144,77 @@ describe('API error propagation', () => {
 
       await expect(searchProducts('test')).rejects.toThrow('Request failed');
     });
+
+  describe('admin shipment functions', () => {
+    const TOKEN = 'admin-token';
+    const SHIPMENT_ID = 'ship-123';
+
+    it('getAdminShipmentDetail sends auth and returns data', async () => {
+      mockFetch.mockResolvedValueOnce(jsonResponse({ id: SHIPMENT_ID, trackingNumber: 'TRK-1' }));
+
+      const result = await getAdminShipmentDetail(SHIPMENT_ID, TOKEN);
+
+      expect(result.trackingNumber).toBe('TRK-1');
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining(`/api/admin/shipments/${SHIPMENT_ID}`),
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: 'Bearer admin-token' }),
+        }),
+      );
+    });
+
+    it('getAdminShipmentStages returns stages array', async () => {
+      mockFetch.mockResolvedValueOnce(jsonResponse([{ stageName: 'ORIGIN' }]));
+
+      const result = await getAdminShipmentStages(SHIPMENT_ID, TOKEN);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].stageName).toBe('ORIGIN');
+    });
+
+    it('adminUpdateShipment sends PUT with body', async () => {
+      mockFetch.mockResolvedValueOnce(jsonResponse({ id: SHIPMENT_ID, status: 'IN_TRANSIT' }));
+
+      const result = await adminUpdateShipment(SHIPMENT_ID, { status: 'IN_TRANSIT' }, TOKEN);
+
+      expect(result.status).toBe('IN_TRANSIT');
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining(`/api/admin/shipments/${SHIPMENT_ID}`),
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ status: 'IN_TRANSIT' }),
+        }),
+      );
+    });
+
+    it('advanceShipmentStage sends POST with stageName and note', async () => {
+      mockFetch.mockResolvedValueOnce(jsonResponse({ id: SHIPMENT_ID, currentStage: 'CUSTOMS' }));
+
+      const result = await advanceShipmentStage(SHIPMENT_ID, 'CUSTOMS', 'Cleared customs', TOKEN);
+
+      expect(result.currentStage).toBe('CUSTOMS');
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining(`/api/admin/shipments/${SHIPMENT_ID}/advance-stage`),
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ stageName: 'CUSTOMS', note: 'Cleared customs' }),
+        }),
+      );
+    });
+
+    it('advanceShipmentStage sends null note', async () => {
+      mockFetch.mockResolvedValueOnce(jsonResponse({ id: SHIPMENT_ID }));
+
+      await advanceShipmentStage(SHIPMENT_ID, 'DELIVERED', null, TOKEN);
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          body: JSON.stringify({ stageName: 'DELIVERED', note: null }),
+        }),
+      );
+    });
+  });
 
     it('uses string body as message when response is plain text', async () => {
       mockFetch.mockResolvedValueOnce({

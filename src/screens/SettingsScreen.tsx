@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useAppTheme, useThemeMode, FontSize, Radius, Space, CardShadow } from '../theme';
@@ -45,6 +45,7 @@ export default function SettingsScreen() {
   const [loading, setLoading] = useState(true);
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [totalCost, setTotalCost] = useState<string>('GHS 0');
+  const [error, setError] = useState<string | null>(null);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
@@ -81,11 +82,17 @@ export default function SettingsScreen() {
         setTotalCost(`GHS ${Math.round(total).toLocaleString()}`);
       }
     } catch (err: any) {
-      Alert.alert('Failed to load data', err?.message || 'Please try again.');
+      setError(err?.message || 'Failed to load data');
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const handleRetry = useCallback(() => {
+    setError(null);
+    setLoading(true);
+    loadData();
+  }, [loadData]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -107,7 +114,7 @@ export default function SettingsScreen() {
 
   const handleLogout = async () => {
     await clearAuthState();
-    navigation.getParent<any>()?.replace('Login');
+    navigation.getParent<any>()?.reset({ index: 0, routes: [{ name: 'Login' }] });
   };
 
   const handleDeleteAccount = () => {
@@ -137,7 +144,7 @@ export default function SettingsScreen() {
       setDeleteModalVisible(false);
       setDeletePassword('');
       await clearAuthState();
-    navigation.getParent<any>()?.replace('Login');
+    navigation.getParent<any>()?.reset({ index: 0, routes: [{ name: 'Login' }] });
   } catch (err: any) {
       console.log('[Settings] deleteMyAccount error:', err?.message, err);
       Alert.alert('Deletion failed', err?.message || 'Wrong password or account could not be deleted.');
@@ -211,7 +218,14 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {loading ? (
+        {error ? (
+          <View style={[s.emptyReport, { backgroundColor: colors.card }]}>
+            <Text style={[s.emptyReportText, { color: colors.muted }]}>{error}</Text>
+            <TouchableOpacity style={[s.retryBtn, { backgroundColor: colors.orangeDim }]} onPress={handleRetry} activeOpacity={0.8}>
+              <Text style={[s.retryBtnText, { color: colors.orange }]}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : loading ? (
           <View style={{ paddingVertical: 40, alignItems: 'center' }}>
             <ActivityIndicator size="large" color={colors.orange} />
             <Text style={[s.emptyText, { color: colors.muted, marginTop: Space.md }]}>Loading report…</Text>
@@ -685,6 +699,9 @@ const s = StyleSheet.create({
     ...CardShadow,
   },
   emptyReportText: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.sm, marginTop: Space.sm },
+
+  retryBtn: { marginTop: Space.md, paddingHorizontal: 24, paddingVertical: 10, borderRadius: Radius.pill },
+  retryBtnText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.sm },
 
   emptyText: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.sm },
 });

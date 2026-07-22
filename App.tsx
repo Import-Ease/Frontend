@@ -22,6 +22,10 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import SearchProductsScreen from './src/screens/SearchProductsScreen';
 import MyProductsScreen from './src/screens/MyProductsScreen';
 import SupplierProfileScreen from './src/screens/SupplierProfileScreen';
+import ProductDetailScreen from './src/screens/ProductDetailScreen';
+import PlaceOrderScreen from './src/screens/PlaceOrderScreen';
+import AdminUsersScreen from './src/screens/AdminUsersScreen';
+import AdminShipmentDetailScreen from './src/screens/AdminShipmentDetailScreen';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -44,16 +48,7 @@ function getUserRole(): string {
 /* ── BOTTOM TABS ────────────────────────────────────────── */
 function MainTabs() {
     const { colors } = useAppTheme();
-    const [role, setRole] = useState(getUserRole());
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            const current = getUserRole();
-            if (current !== role) setRole(current);
-        }, 500);
-        return () => clearInterval(interval);
-    }, [role]);
-
+    const role = getUserRole();
     const isSupplier = role === 'SUPPLIER';
 
     const commonTabBarOptions = {
@@ -113,6 +108,7 @@ function MainTabs() {
 export default function App() {
     const { colors, isDark } = useAppTheme();
     const [authReady, setAuthReady] = useState(false);
+    const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList>('Login');
 
     const [fontsLoaded] = useFonts({
         Poppins_600SemiBold,
@@ -122,7 +118,16 @@ export default function App() {
     });
 
     useEffect(() => {
-        loadAuthState().finally(() => setAuthReady(true));
+        loadAuthState().finally(() => {
+            const token = (globalThis as any).__IMPORT_EASE_TOKEN__;
+            const adminToken = (globalThis as any).__IMPORT_EASE_ADMIN_TOKEN__;
+            if (adminToken) {
+                setInitialRoute('AdminDashboard');
+            } else if (token) {
+                setInitialRoute('Main');
+            }
+            setAuthReady(true);
+        });
     }, []);
 
     if (!fontsLoaded || !authReady) {
@@ -137,12 +142,16 @@ export default function App() {
         <ThemeProvider>
         <NavigationContainer>
             <StatusBar style={isDark ? 'light' : 'dark'} />
-            <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
+            <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="Login" component={LoginScreen} />
                 <Stack.Screen name="Main" component={MainTabs} />
                 <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
                 <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
                 <Stack.Screen name="AddShipment" component={AddShipmentScreen} options={{ presentation: 'modal' }} />
+                <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ presentation: 'card' }} />
+                <Stack.Screen name="PlaceOrder" component={PlaceOrderScreen} options={{ presentation: 'card' }} />
+                <Stack.Screen name="AdminUsers" component={AdminUsersScreen} options={{ presentation: 'card' }} />
+                <Stack.Screen name="AdminShipmentDetail" component={AdminShipmentDetailScreen} options={{ presentation: 'card' }} />
             </Stack.Navigator>
         </NavigationContainer>
         </ThemeProvider>

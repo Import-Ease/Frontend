@@ -29,6 +29,10 @@ export interface Shipment {
   alert: ShipmentAlert | null;
   costs: ShipmentCosts;
   lastUpdate: string;
+  rawStatus: string;
+  productId: number | null;
+  shippingMode: string | null;
+  orderQuantity: number | null;
 }
 
 export interface ShipmentSummary {
@@ -44,7 +48,11 @@ export type RootStackParamList = {
   Main: undefined;
   AdminLogin: undefined;
   AdminDashboard: undefined;
+  AdminUsers: undefined;
+  AdminShipmentDetail: { shipmentId: string };
   AddShipment: undefined;
+  ProductDetail: { productId: string; productName?: string };
+  PlaceOrder: { productId: string; productName: string; productPrice: number; imageUrl: string; supplierName: string };
 };
 
 export type MainTabParamList = {
@@ -81,13 +89,26 @@ export interface SupplierProfile {
 /* ── Backend → Frontend mapping ────────────────────────── */
 
 const STAGE_ORDER: Record<string, { status: ShipmentStatus; index: number; label: string }> = {
-  PENDING:    { status: 'origin',   index: 0, label: 'Pending' },
-  ORIGIN:     { status: 'origin',   index: 0, label: 'At Origin' },
-  TRANSIT:    { status: 'transit',  index: 1, label: 'In Transit' },
-  AT_PORT:    { status: 'port',     index: 2, label: 'At Port' },
-  CUSTOMS:    { status: 'customs',  index: 3, label: 'At Customs' },
-  DELIVERED:  { status: 'delivered', index: 4, label: 'Delivered' },
-  ARCHIVED:   { status: 'delivered', index: 4, label: 'Archived' },
+  ORDER_CREATED:   { status: 'origin',   index: 0, label: 'Order Created' },
+  SUPPLIER_CONFIRMED: { status: 'origin',   index: 0, label: 'Supplier Confirmed' },
+  SUPPLIER_PAID:   { status: 'origin',   index: 0, label: 'Supplier Paid' },
+  AWAITING_PICKUP: { status: 'origin',   index: 0, label: 'Awaiting Pickup' },
+  COLLECTED:       { status: 'origin',   index: 0, label: 'Collected' },
+  ORIGIN_WAREHOUSE:{ status: 'origin',   index: 0, label: 'Origin Warehouse' },
+  EXPORT_CUSTOMS:  { status: 'origin',   index: 0, label: 'Export Customs' },
+  IN_TRANSIT:      { status: 'transit',  index: 1, label: 'In Transit' },
+  DESTINATION_PORT:{ status: 'port',     index: 2, label: 'Destination Port' },
+  IMPORT_CUSTOMS:  { status: 'customs',  index: 3, label: 'Import Customs' },
+  WAREHOUSE:       { status: 'customs',  index: 3, label: 'Warehouse' },
+  OUT_FOR_DELIVERY:{ status: 'transit',  index: 1, label: 'Out for Delivery' },
+  DELIVERED:       { status: 'delivered', index: 4, label: 'Delivered' },
+  PENDING_PAYMENT: { status: 'origin',   index: 0, label: 'Pending Payment' },
+  PENDING:         { status: 'origin',   index: 0, label: 'Pending' },
+  ORIGIN:          { status: 'origin',   index: 0, label: 'At Origin' },
+  TRANSIT:         { status: 'transit',  index: 1, label: 'In Transit' },
+  AT_PORT:         { status: 'port',     index: 2, label: 'At Port' },
+  CUSTOMS:         { status: 'customs',  index: 3, label: 'At Customs' },
+  ARCHIVED:        { status: 'delivered', index: 4, label: 'Archived' },
 };
 
 function calcLandedCost(weightKg: number | null): ShipmentCosts {
@@ -154,6 +175,10 @@ export function mapBackendShipment(raw: any): Shipment {
     alert: deriveAlert(raw.status, raw.stages),
     costs: calcLandedCost(raw.weightKg),
     lastUpdate: formatDate(raw.createdAt),
+    rawStatus: raw.status ?? 'PENDING',
+    productId: raw.productId ?? null,
+    shippingMode: raw.shippingMode ?? null,
+    orderQuantity: raw.orderQuantity ?? null,
   };
 }
 

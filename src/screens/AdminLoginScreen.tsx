@@ -50,7 +50,6 @@ export default function AdminLoginScreen() {
                 Alert.alert('Access denied', 'This account does not have admin access.');
                 return;
             }
-            (globalThis as any).__IMPORT_EASE_ADMIN_TOKEN__ = authRes.accessToken;
             await saveAdminToken(authRes.accessToken);
             navigation.replace('AdminDashboard');
         } catch (error: any) {
