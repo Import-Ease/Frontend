@@ -16,17 +16,19 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useAppTheme, FontSize, Radius, Space, CardShadow, useThemeMode } from '../theme';
 import { RootStackParamList, Shipment, ShipmentStatus, ShipmentSummary, mapBackendShipment, computeSummary } from '../types';
-import { AlertBanner, CostBar, Eyebrow, FreightRail, PrimaryButton, StatusBadge } from '../components';
+import { Eyebrow, StatusBadge } from '../components';
+import { ShipmentCard } from '../components/ShipmentCard';
 import {
   PackageIcon, AlertTriangleIcon, CheckCircleIcon, DollarSignIcon,
-  CreditCardIcon, MoonIcon, SunIcon, SearchIcon, PlusIcon, InfoIcon,
+  CreditCardIcon, MoonIcon, SunIcon, SearchIcon,
 } from '../components/Icons';
 import { fetchShipments, fetchTotalCost, initializePayment } from '../services/api';
 
-type FilterKey = ShipmentStatus | 'all';
+type FilterKey = ShipmentStatus | 'all' | 'pending';
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'all', label: 'All' },
+  { key: 'pending', label: 'Pending' },
   { key: 'transit', label: 'Transit' },
   { key: 'customs', label: 'Customs' },
   { key: 'port', label: 'Port' },
@@ -59,59 +61,6 @@ function SummaryCard({ icon, val, label, color, colors }: SummaryCardProps) {
         <Text style={[s.summaryVal, { color }]}>{val}</Text>
         <Text style={[s.summaryLabel, { color: colors.muted }]}>{label}</Text>
       </View>
-  );
-}
-
-interface ShipmentCardProps {
-  ship: Shipment;
-  colors: ReturnType<typeof useAppTheme>['colors'];
-}
-
-function ShipmentCard({ ship, colors }: ShipmentCardProps) {
-  const [open, setOpen] = useState(false);
-  return (
-      <TouchableOpacity onPress={() => setOpen((v) => !v)} activeOpacity={0.9} style={[s.shipCard, { backgroundColor: colors.card }]}>
-        <View style={s.shipTop}>
-          <View style={{ flex: 1 }}>
-            <View style={s.shipIdRow}>
-              <Eyebrow color={colors.navy}>{ship.id}</Eyebrow>
-              <StatusBadge status={ship.status} label={ship.statusLabel} />
-              {ship.alert && (
-                <View style={{ marginLeft: 2 }}>
-                  {ship.alert.type === 'warning' ? (
-                    <AlertTriangleIcon size={14} color={colors.green} />
-                  ) : (
-                    <InfoIcon size={14} color={colors.cobalt} />
-                  )}
-                </View>
-              )}
-            </View>
-            <Text style={[s.shipDesc, { color: colors.text }]}>{ship.description}</Text>
-            <Text style={[s.shipMeta, { color: colors.muted }]}>
-              {ship.origin} → {ship.destination || 'Tema, GH'}  ·  {ship.carrier}  ·  {ship.weight}
-            </Text>
-          </View>
-          <View style={{ alignItems: 'flex-end', marginLeft: Space.sm }}>
-            <Eyebrow color={colors.caption}>ETA</Eyebrow>
-            <Text style={[s.shipEta, { color: colors.text }]}>{ship.eta}</Text>
-            <Text style={[s.shipTime, { color: colors.caption }]}>{ship.lastUpdate}</Text>
-          </View>
-        </View>
-
-        <FreightRail stageIndex={ship.stageIndex} status={ship.status} />
-
-        {open && (
-            <View>
-              <AlertBanner alert={ship.alert} />
-              <CostBar costs={ship.costs} />
-              <View style={{ flexDirection: 'row', marginTop: Space.md, flexWrap: 'wrap' }}>
-                <PrimaryButton label="Update status" color={colors.cobalt} />
-                <PrimaryButton label="Documents" color={colors.green} />
-                <PrimaryButton label="Share" ghost />
-              </View>
-            </View>
-        )}
-      </TouchableOpacity>
   );
 }
 
@@ -168,7 +117,10 @@ export default function DashboardScreen() {
   const visible = useMemo(
       () =>
           shipments.filter((ship) => {
-            const matchesFilter = filter === 'all' || ship.status === filter;
+            const matchesFilter =
+              filter === 'all' ||
+              (filter === 'pending' && (ship.rawStatus === 'PENDING_PAYMENT' || ship.rawStatus === 'PENDING')) ||
+              ship.status === filter;
             const matchesSearch =
                 !search ||
                 ship.description.toLowerCase().includes(search.toLowerCase()) ||
@@ -218,6 +170,43 @@ export default function DashboardScreen() {
     }
   };
 
+  const handlePayNow = async (shipmentId: string) => {
+    const token = getToken();
+    const payerEmail = (globalThis as any).__IMPORT_EASE_EMAIL__ || 'importer@importease.com';
+
+    if (!token) {
+      Alert.alert('Not logged in', 'Please sign in before starting a payment.');
+      return;
+    }
+
+    try {
+      setPaying(true);
+      const result = await initializePayment(
+        {
+          payerEmail,
+          supplierName: 'ImportEase Supplier',
+          amount: '0.00',
+          currency: 'GHS',
+        },
+        token,
+      );
+
+      if (result?.authorizationUrl) {
+        await Linking.openURL(String(result.authorizationUrl));
+        Alert.alert(
+          'Payment started',
+          'Complete the checkout in your browser. Once paid, ask an admin to advance this shipment status.',
+        );
+      } else {
+        Alert.alert('Payment setup failed', 'The server did not return a checkout link.');
+      }
+    } catch (error: any) {
+      Alert.alert('Payment failed', error?.message || 'Unable to start payment right now.');
+    } finally {
+      setPaying(false);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]} edges={['top']}>
@@ -248,14 +237,6 @@ export default function DashboardScreen() {
                 ) : (
                   <MoonIcon size={18} color={colors.navy} />
                 )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                  style={[s.addBtn, { backgroundColor: colors.cobalt }]}
-                  onPress={() => navigation.navigate('AddShipment')}
-                  activeOpacity={0.85}
-              >
-                <PlusIcon size={16} color="#FFFFFF" strokeWidth={2.5} />
-                <Text style={s.addBtnText}>Add</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -349,7 +330,7 @@ export default function DashboardScreen() {
                 <Text style={[s.emptyText, { color: colors.muted }]}>Try a different filter or search, or add a new shipment.</Text>
               </View>
           ) : (
-              visible.map((ship) => <ShipmentCard key={ship.id} ship={ship} colors={colors} />)
+              visible.map((ship) => <ShipmentCard key={ship.id} ship={ship} onPayNow={handlePayNow} paying={paying} isAdmin={false} />)
           )}
         </ScrollView>
       </SafeAreaView>
@@ -416,6 +397,9 @@ const s = StyleSheet.create({
   shipMeta: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.xs },
   shipEta: { fontFamily: 'Poppins_600SemiBold', fontSize: FontSize.sm, marginTop: 4 },
   shipTime: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.xs, marginTop: 4 },
+
+  payNowButton: { borderRadius: Radius.pill, paddingVertical: 12, alignItems: 'center', marginTop: Space.md },
+  payNowButtonText: { color: '#FFFFFF', fontFamily: 'Nunito_700Bold', fontSize: FontSize.sm },
 
   empty: { alignItems: 'center', paddingVertical: 60 },
   emptyIconWrap: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: Space.md },

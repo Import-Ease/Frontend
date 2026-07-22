@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -7,14 +7,19 @@ import {
     StyleSheet,
     Text,
     TextInput,
+    TouchableOpacity,
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppTheme, FontSize, Radius, Space, CardShadow } from '../theme';
-import { SearchIcon, PhoneIcon } from '../components/Icons';
-import { searchProducts } from '../services/api';
+import { RootStackParamList } from '../types';
+import { SearchIcon, PhoneIcon, ClockIcon, XIcon } from '../components/Icons';
+import { searchProducts, fetchSearchHistory, deleteSearchHistoryItem, clearSearchHistory } from '../services/api';
 
 interface Product {
+    productId: string;
     productName: string;
     productPrice: number;
     imageUrl: string;
@@ -23,11 +28,24 @@ interface Product {
 }
 
 export default function SearchProductsScreen() {
+    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const { colors } = useAppTheme();
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<Product[]>([]);
     const [loading, setLoading] = useState(false);
     const [searched, setSearched] = useState(false);
+    const [history, setHistory] = useState<any[]>([]);
+
+    const getToken = () => (globalThis as any).__IMPORT_EASE_TOKEN__ as string | undefined;
+
+    useEffect(() => {
+        const token = getToken();
+        if (token) {
+            fetchSearchHistory(token)
+                .then((h) => setHistory(Array.isArray(h) ? h : []))
+                .catch(() => {});
+        }
+    }, []);
 
     const handleSearch = useCallback(async (text: string) => {
         const trimmed = text.trim();
@@ -40,8 +58,13 @@ export default function SearchProductsScreen() {
         setLoading(true);
         setSearched(true);
         try {
-            const data = await searchProducts(trimmed);
+            const token = getToken();
+            const data = await searchProducts(trimmed, token);
             setResults(Array.isArray(data) ? data : []);
+            if (token) {
+                const h = await fetchSearchHistory(token).catch(() => []);
+                setHistory(Array.isArray(h) ? h : []);
+            }
         } catch (err: any) {
             Alert.alert('Search failed', err?.message || 'Could not search products. Please try again.');
             setResults([]);
@@ -51,7 +74,23 @@ export default function SearchProductsScreen() {
     }, []);
 
     const renderItem = ({ item }: { item: Product }) => (
-        <View style={[s.card, { backgroundColor: colors.card }]}>
+        <TouchableOpacity
+            style={[s.card, { backgroundColor: colors.card }]}
+            activeOpacity={0.9}
+            onPress={() => {
+                try {
+                    navigation.navigate('ProductDetail', {
+                        productId: item.productId,
+                        productName: item.productName,
+                    });
+                } catch {
+                    navigation.getParent()?.navigate('ProductDetail', {
+                        productId: item.productId,
+                        productName: item.productName,
+                    });
+                }
+            }}
+        >
             {item.imageUrl ? (
                 <Image source={{ uri: item.imageUrl }} style={s.cardImage} resizeMode="cover" />
             ) : (
@@ -78,7 +117,7 @@ export default function SearchProductsScreen() {
                     </View>
                 ) : null}
             </View>
-        </View>
+        </TouchableOpacity>
     );
 
     return (
@@ -119,14 +158,65 @@ export default function SearchProductsScreen() {
                         </Text>
                     </View>
                 ) : !searched ? (
-                    <View style={s.centered}>
-                        <View style={[s.emptyIconWrap, { backgroundColor: colors.surfaceAlt }]}>
-                            <SearchIcon size={40} color={colors.caption} strokeWidth={1.2} />
+                    <View>
+                        {history.length > 0 && (
+                            <View style={{ marginBottom: Space.lg }}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Space.sm }}>
+                                    <Text style={[s.sectionLabel, { color: colors.muted }]}>RECENT SEARCHES</Text>
+                                    <TouchableOpacity
+                                        onPress={async () => {
+                                            const token = getToken();
+                                            if (token) {
+                                                await clearSearchHistory(token).catch(() => {});
+                                                setHistory([]);
+                                            }
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={[s.clearText, { color: colors.cobalt }]}>Clear all</Text>
+                                    </TouchableOpacity>
+                                </View>
+                                {history.map((item: any) => (
+                                    <View key={item.id} style={[s.historyRow, { borderBottomColor: colors.border }]}>
+                                        <TouchableOpacity
+                                            style={s.historyQueryWrap}
+                                            onPress={() => {
+                                                setQuery(item.searchQuery);
+                                                handleSearch(item.searchQuery);
+                                            }}
+                                            activeOpacity={0.7}
+                                        >
+                                            <ClockIcon size={14} color={colors.caption} />
+                                            <Text style={[s.historyQuery, { color: colors.text }]} numberOfLines={1}>
+                                                {item.searchQuery}
+                                            </Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={async () => {
+                                                const token = getToken();
+                                                if (token) {
+                                                    await deleteSearchHistoryItem(item.id, token).catch(() => {});
+                                                    setHistory((prev: any[]) => prev.filter((h: any) => h.id !== item.id));
+                                                }
+                                            }}
+                                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                            activeOpacity={0.6}
+                                        >
+                                            <XIcon size={14} color={colors.caption} />
+                                        </TouchableOpacity>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
+                        <View style={s.centered}>
+                            <View style={[s.emptyIconWrap, { backgroundColor: colors.surfaceAlt }]}>
+                                <SearchIcon size={40} color={colors.caption} strokeWidth={1.2} />
+                            </View>
+                            <Text style={[s.emptyTitle, { color: colors.text }]}>Discover products</Text>
+                            <Text style={[s.emptyText, { color: colors.muted }]}>
+                                Type a product name above to search suppliers
+                            </Text>
                         </View>
-                        <Text style={[s.emptyTitle, { color: colors.text }]}>Discover products</Text>
-                        <Text style={[s.emptyText, { color: colors.muted }]}>
-                            Type a product name above to search suppliers
-                        </Text>
                     </View>
                 ) : results.length === 0 ? (
                     <View style={s.centered}>
@@ -141,10 +231,12 @@ export default function SearchProductsScreen() {
                 ) : (
                     <FlatList
                         data={results}
-                        keyExtractor={(_, i) => String(i)}
+                        keyExtractor={(item) => String(item.productId)}
                         renderItem={renderItem}
                         contentContainerStyle={s.list}
                         showsVerticalScrollIndicator={false}
+                        initialNumToRender={5}
+                        windowSize={10}
                     />
                 )}
             </View>
@@ -175,6 +267,15 @@ const s = StyleSheet.create({
         fontSize: FontSize.base,
         padding: 0,
     },
+
+    sectionLabel: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.xs, letterSpacing: 0.5 },
+    clearText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.xs },
+    historyRow: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        paddingVertical: Space.sm, borderBottomWidth: 1,
+    },
+    historyQueryWrap: { flexDirection: 'row', alignItems: 'center', gap: Space.sm, flex: 1 },
+    historyQuery: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.sm, flex: 1 },
 
     centered: { alignItems: 'center', paddingTop: 60 },
     emptyIconWrap: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: Space.md },

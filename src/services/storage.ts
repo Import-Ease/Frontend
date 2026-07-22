@@ -55,6 +55,10 @@ export async function saveAdminToken(token: string): Promise<void> {
   (globalThis as any).__IMPORT_EASE_ADMIN_TOKEN__ = token;
 }
 
+export async function getAdminToken(): Promise<string | null> {
+  return AsyncStorage.getItem(KEYS.ADMIN_TOKEN);
+}
+
 export async function clearAuthState(): Promise<void> {
   await AsyncStorage.multiRemove(Object.values(KEYS));
   (globalThis as any).__IMPORT_EASE_TOKEN__ = undefined;

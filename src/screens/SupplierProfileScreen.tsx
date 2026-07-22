@@ -42,6 +42,7 @@ export default function SupplierProfileScreen() {
     const navigation = useNavigation();
 
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [hasProfile, setHasProfile] = useState<boolean | null>(null);
     const [form, setForm] = useState<FormData>(EMPTY_FORM);
     const [saving, setSaving] = useState(false);
@@ -65,13 +66,24 @@ export default function SupplierProfileScreen() {
                 address: data.address || '',
                 shippingOrigin: data.shippingOrigin || '',
             });
-        } catch {
-            setHasProfile(false);
+        } catch (err: any) {
+            const msg = err?.message || '';
+            if (msg.includes('No supplier profile found')) {
+                setHasProfile(false);
+            } else {
+                setError(msg || 'Could not load profile');
+            }
             setForm(EMPTY_FORM);
         } finally {
             setLoading(false);
         }
     }, []);
+
+    const handleRetry = useCallback(() => {
+        setError(null);
+        setLoading(true);
+        loadProfile();
+    }, [loadProfile]);
 
     useEffect(() => {
         const unsubscribe = navigation.addListener('focus', () => {
@@ -155,6 +167,13 @@ export default function SupplierProfileScreen() {
                             <Text style={[s.emptyText, { color: colors.muted, marginTop: Space.md }]}>
                                 Loading profile...
                             </Text>
+                        </View>
+                    ) : error ? (
+                        <View style={[s.card, { backgroundColor: colors.card }]}>
+                            <Text style={[s.emptyText, { color: colors.muted }]}>{error}</Text>
+                            <TouchableOpacity style={[s.retryBtn, { backgroundColor: colors.cobaltDim, marginTop: Space.md, alignSelf: 'center' }]} onPress={handleRetry} activeOpacity={0.8}>
+                                <Text style={[s.retryBtnText, { color: colors.cobalt }]}>Retry</Text>
+                            </TouchableOpacity>
                         </View>
                     ) : (
                         <View style={[s.card, { backgroundColor: colors.card }]}>
@@ -274,6 +293,8 @@ const s = StyleSheet.create({
 
     centered: { alignItems: 'center', paddingTop: 60 },
     emptyText: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.sm, textAlign: 'center' },
+    retryBtn: { paddingHorizontal: 24, paddingVertical: 10, borderRadius: Radius.pill },
+    retryBtnText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.sm },
 
     card: { borderRadius: Radius.lg, padding: Space.lg, ...CardShadow },
 

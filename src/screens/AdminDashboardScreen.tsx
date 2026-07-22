@@ -10,12 +10,12 @@ import {
     TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppTheme, Space, Radius, CardShadow, FontSize } from '../theme';
 import { RootStackParamList } from '../types';
 import { StatusBadge } from '../components';
-import { ChevronLeftIcon, LogoutIcon, TruckIcon, UserIcon, CheckIcon } from '../components/Icons';
+import { ChevronLeftIcon, LogoutIcon, TruckIcon, UserIcon, CheckIcon, ShieldIcon } from '../components/Icons';
 import { getAllShipmentsAdmin, advanceShipmentStage } from '../services/api';
 
 const STAGE_OPTIONS = ['ORIGIN', 'TRANSIT', 'AT_PORT', 'CUSTOMS', 'DELIVERED'] as const;
@@ -41,8 +41,8 @@ function mapAdminShipment(raw: any): AdminShipment {
         description: raw.description ?? '',
         status: raw.status ?? 'PENDING',
         carrier: raw.carrier ?? '',
-        userFullName: raw.user?.fullName ?? '',
-        userEmail: raw.user?.email ?? '',
+        userFullName: (raw.userFullName ?? raw.user?.fullName) ?? '',
+        userEmail: (raw.userEmail ?? raw.user?.email) ?? '',
         eta: raw.estimatedTimeOfArrival ?? '',
         goodsType: raw.goodsType ?? '',
         originPort: raw.originPort ?? '',
@@ -64,6 +64,7 @@ export default function AdminDashboardScreen() {
     const { colors } = useAppTheme();
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [shipments, setShipments] = useState<AdminShipment[]>([]);
     const [stageModalVisible, setStageModalVisible] = useState(false);
     const [selectedShipment, setSelectedShipment] = useState<AdminShipment | null>(null);
@@ -81,11 +82,17 @@ export default function AdminDashboardScreen() {
             const raw = await getAllShipmentsAdmin(token);
             setShipments(raw.map(mapAdminShipment));
         } catch (err: any) {
-            Alert.alert('Failed to load shipments', err?.message || 'Please try again.');
+            setError(err?.message || 'Failed to load shipments');
         } finally {
             setLoading(false);
         }
     }, []);
+
+    const handleRetry = useCallback(() => {
+        setError(null);
+        setLoading(true);
+        loadData();
+    }, [loadData]);
 
     useEffect(() => {
         const unsubscribe = navigation.addListener('focus', () => {
@@ -131,7 +138,7 @@ export default function AdminDashboardScreen() {
                 style: 'destructive',
                 onPress: () => {
                     (globalThis as any).__IMPORT_EASE_ADMIN_TOKEN__ = undefined;
-                    navigation.replace('Login');
+                    navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
                 },
             },
         ]);
@@ -147,6 +154,13 @@ export default function AdminDashboardScreen() {
                 </View>
                 <TouchableOpacity
                     style={[s.iconBtn, { backgroundColor: colors.surfaceAlt }]}
+                    onPress={() => navigation.navigate('AdminUsers')}
+                    activeOpacity={0.7}
+                >
+                    <ShieldIcon size={18} color={colors.cobalt} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[s.iconBtn, { backgroundColor: colors.surfaceAlt }]}
                     onPress={handleLogout}
                     activeOpacity={0.7}
                 >
@@ -160,7 +174,14 @@ export default function AdminDashboardScreen() {
                     ALL SHIPMENTS ({shipments.length})
                 </Text>
 
-                {loading ? (
+                {error ? (
+                    <View style={s.centered}>
+                        <Text style={[s.emptyText, { color: colors.muted }]}>{error}</Text>
+                        <TouchableOpacity style={[s.retryBtn, { backgroundColor: colors.orangeDim, marginTop: Space.md }]} onPress={handleRetry} activeOpacity={0.8}>
+                            <Text style={[s.retryBtnText, { color: colors.orange }]}>Retry</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : loading ? (
                     <View style={s.centered}>
                         <ActivityIndicator size="large" color={colors.orange} />
                         <Text style={[s.emptyText, { color: colors.muted, marginTop: Space.md }]}>Loading shipments…</Text>
@@ -174,7 +195,12 @@ export default function AdminDashboardScreen() {
                     shipments.map((ship) => {
                         const mapped = STATUS_MAP[ship.status] ?? STATUS_MAP.PENDING;
                         return (
-                            <View key={ship.id} style={[s.card, { backgroundColor: colors.card }]}>
+                            <TouchableOpacity
+                                key={ship.id}
+                                style={[s.card, { backgroundColor: colors.card }]}
+                                onPress={() => navigation.navigate('AdminShipmentDetail', { shipmentId: ship.id })}
+                                activeOpacity={0.95}
+                            >
                                 {/* Top row: tracking + status */}
                                 <View style={s.cardTop}>
                                     <Text style={[s.trackingId, { color: colors.orange }]} numberOfLines={1}>
@@ -233,7 +259,7 @@ export default function AdminDashboardScreen() {
                                 >
                                     <Text style={s.advanceBtnText}>Advance Stage</Text>
                                 </TouchableOpacity>
-                            </View>
+                            </TouchableOpacity>
                         );
                     })
                 )}
@@ -311,6 +337,8 @@ const s = StyleSheet.create({
 
     centered: { paddingVertical: 60, alignItems: 'center' },
     emptyText: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.sm },
+    retryBtn: { paddingHorizontal: 24, paddingVertical: 10, borderRadius: Radius.pill },
+    retryBtnText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.sm },
 
     card: {
         padding: Space.md,
