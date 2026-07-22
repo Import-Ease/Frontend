@@ -118,20 +118,22 @@ export default function DashboardScreen() {
   );
 
   const visible = useMemo(
-      () =>
-          shipments.filter((ship) => {
-            const matchesFilter =
-                filter === 'all' ||
-                (filter === 'pending' && (ship.rawStatus === 'PENDING_PAYMENT' || ship.rawStatus === 'PENDING')) ||
-                ship.status === filter;
-            const matchesSearch =
-                !search ||
-                ship.description.toLowerCase().includes(search.toLowerCase()) ||
-                ship.id.toLowerCase().includes(search.toLowerCase());
-            return matchesFilter && matchesSearch;
-          }),
-      [shipments, filter, search],
-  );
+  () =>
+    shipments.filter((ship) => {
+      const matchesFilter =
+        filter === 'all' ||
+        (filter === 'pending' && (ship.rawStatus === 'PENDING_PAYMENT' || ship.rawStatus === 'PENDING')) ||
+        ship.status === filter;
+
+      const matchesSearch =
+        !search ||
+        ship.description.toLowerCase().includes(search.toLowerCase()) ||
+        ship.id.toLowerCase().includes(search.toLowerCase());
+
+      return matchesFilter && matchesSearch;
+    }),
+  [shipments, filter, search],
+);
 
   const handlePaySupplier = async () => {
     const token = getToken();
@@ -182,6 +184,7 @@ export default function DashboardScreen() {
       return;
     }
 
+<<<<<<< ours
     const shipment = backendShipments.find((s: any) => s.trackingId === shipmentId || s.id === shipmentId);
     const amount = shipment?.quotationAmount != null ? Number(shipment.quotationAmount).toFixed(2) : '0.00';
     const currency = shipment?.quotationCurrency || 'GHS';
@@ -196,13 +199,30 @@ export default function DashboardScreen() {
             currency,
           },
           token,
+=======
+    try {
+      setPaying(true);
+      const result = await initializePayment(
+        {
+          payerEmail,
+          supplierName: 'ImportEase Supplier',
+          amount: '0.00',
+          currency: 'GHS',
+        },
+        token,
+>>>>>>> theirs
       );
 
       if (result?.authorizationUrl) {
         await Linking.openURL(String(result.authorizationUrl));
         Alert.alert(
+<<<<<<< ours
             'Payment started',
             `Paying ${currency} ${amount}. Complete the checkout in your browser. Once paid, ask an admin to mark this shipment as paid.`,
+=======
+          'Payment started',
+          'Complete the checkout in your browser. Once paid, ask an admin to advance this shipment status.',
+>>>>>>> theirs
         );
       } else {
         Alert.alert('Payment setup failed', 'The server did not return a checkout link.');

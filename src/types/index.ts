@@ -34,10 +34,12 @@ export interface Shipment {
   productId: number | null;
   shippingMode: string | null;
   orderQuantity: number | null;
+
   quotationAmount?: number | null;
   quotationCurrency?: string;
   paymentStatus?: string;
   amountPaid?: number | null;
+
 }
 
 export interface ShipmentSummary {
