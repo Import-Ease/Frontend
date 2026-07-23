@@ -50,6 +50,27 @@ function ShipmentCardInner({ ship, onPayNow, paying, isAdmin }: ShipmentCardProp
       {open && (
         <View>
           <AlertBanner alert={ship.alert} />
+          {/* Quotation display */}
+          {ship.quotationAmount != null && (
+            <View style={[s.quotationRow, { backgroundColor: colors.surfaceAlt }]}>
+              <View style={s.quotationLeft}>
+                <Text style={[s.quotationLabel, { color: colors.muted }]}>Quotation</Text>
+                <Text style={[s.quotationValue, { color: colors.text }]}>
+                  {ship.quotationCurrency || 'GHS'} {Number(ship.quotationAmount).toLocaleString()}
+                </Text>
+              </View>
+              <View style={s.quotationRight}>
+                <Text style={[s.paymentLabel, { color: colors.muted }]}>
+                  {ship.paymentStatus === 'PAID' ? 'Paid' : ship.paymentStatus === 'PARTIAL' ? `Paid ${ship.quotationCurrency || 'GHS'} ${Number(ship.amountPaid || 0).toLocaleString()}` : 'Unpaid'}
+                </Text>
+                <Text style={[s.paymentStatusText, {
+                  color: ship.paymentStatus === 'PAID' ? colors.green : ship.paymentStatus === 'PARTIAL' ? colors.orange : colors.caption
+                }]}>
+                  {ship.paymentStatus === 'PAID' ? '✓' : ship.paymentStatus === 'PARTIAL' ? '◐' : '○'}
+                </Text>
+              </View>
+            </View>
+          )}
           <CostBar costs={ship.costs} />
           {ship.rawStatus === 'PENDING_PAYMENT' && onPayNow && (
             <TouchableOpacity
@@ -74,6 +95,13 @@ export const ShipmentCard = memo(ShipmentCardInner);
 
 const s = StyleSheet.create({
   shipCard: { borderRadius: Radius.lg, padding: Space.md, marginBottom: Space.sm, ...CardShadow },
+  quotationRow: { flexDirection: 'row', borderRadius: Radius.md, padding: Space.sm, marginBottom: Space.sm },
+  quotationLeft: { flex: 1 },
+  quotationLabel: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.xs },
+  quotationValue: { fontFamily: 'Poppins_600SemiBold', fontSize: FontSize.base, marginTop: 2 },
+  quotationRight: { alignItems: 'flex-end', justifyContent: 'center' },
+  paymentLabel: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.xs },
+  paymentStatusText: { fontFamily: 'Poppins_700Bold', fontSize: FontSize.lg, marginTop: 2 },
   shipTop: { flexDirection: 'row', alignItems: 'flex-start' },
   shipIdRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 5, flexWrap: 'wrap' },
   shipDesc: { fontFamily: 'Poppins_600SemiBold', fontSize: FontSize.md, marginBottom: 3 },

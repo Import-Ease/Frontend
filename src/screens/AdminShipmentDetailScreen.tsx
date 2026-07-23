@@ -136,6 +136,10 @@ export default function AdminShipmentDetailScreen() {
             destinationPort: shipment.destinationPort || '',
             status: shipment.status || '',
             paySupplier: shipment.paySupplier || '',
+            quotationAmount: shipment.quotationAmount != null ? String(shipment.quotationAmount) : '',
+            quotationCurrency: shipment.quotationCurrency || 'GHS',
+            paymentStatus: shipment.paymentStatus || 'PENDING',
+            amountPaid: shipment.amountPaid != null ? String(shipment.amountPaid) : '0',
         });
         setEditModal(true);
     };
@@ -253,6 +257,15 @@ export default function AdminShipmentDetailScreen() {
                     <DetailRow label="Shipping Mode" value={shipment.shippingMode || '—'} colors={colors} />
                     <DetailRow label="Quantity" value={shipment.orderQuantity != null ? String(shipment.orderQuantity) : '—'} colors={colors} />
                     <DetailRow label="Pay Supplier" value={shipment.paySupplier || '(empty)'} colors={colors} />
+                </View>
+
+                {/* Quotation card */}
+                <View style={[s.card, { backgroundColor: colors.card }]}>
+                    <Eyebrow color={colors.navy}>Quotation / Payment</Eyebrow>
+                    <DetailRow label="Quotation" value={shipment.quotationAmount != null ? `${shipment.quotationCurrency || 'GHS'} ${Number(shipment.quotationAmount).toLocaleString()}` : 'Not set'} colors={colors} />
+                    <DetailRow label="Amount Paid" value={shipment.amountPaid != null ? `${shipment.quotationCurrency || 'GHS'} ${Number(shipment.amountPaid).toLocaleString()}` : 'GHS 0'} colors={colors} />
+                    <DetailRow label="Outstanding" value={shipment.quotationAmount != null && shipment.amountPaid != null ? `${shipment.quotationCurrency || 'GHS'} ${Math.max(0, Number(shipment.quotationAmount) - Number(shipment.amountPaid)).toLocaleString()}` : '—'} colors={colors} />
+                    <DetailRow label="Payment Status" value={shipment.paymentStatus || 'PENDING'} colors={colors} />
                 </View>
 
                 {/* Customer card */}
