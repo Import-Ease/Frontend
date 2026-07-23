@@ -179,14 +179,18 @@ export default function DashboardScreen() {
       return;
     }
 
+    const shipment = backendShipments.find((s: any) => s.trackingId === shipmentId || s.id === shipmentId);
+    const amount = shipment?.quotationAmount != null ? Number(shipment.quotationAmount).toFixed(2) : '0.00';
+    const currency = shipment?.quotationCurrency || 'GHS';
+
     try {
       setPaying(true);
       const result = await initializePayment(
         {
           payerEmail,
           supplierName: 'ImportEase Supplier',
-          amount: '0.00',
-          currency: 'GHS',
+          amount,
+          currency,
         },
         token,
       );
@@ -195,7 +199,7 @@ export default function DashboardScreen() {
         await Linking.openURL(String(result.authorizationUrl));
         Alert.alert(
           'Payment started',
-          'Complete the checkout in your browser. Once paid, ask an admin to advance this shipment status.',
+          `Paying ${currency} ${amount}. Complete the checkout in your browser. Once paid, ask an admin to mark this shipment as paid.`,
         );
       } else {
         Alert.alert('Payment setup failed', 'The server did not return a checkout link.');

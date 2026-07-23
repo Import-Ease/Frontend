@@ -18,7 +18,11 @@ import { StatusBadge } from '../components';
 import { ChevronLeftIcon, LogoutIcon, TruckIcon, UserIcon, CheckIcon, ShieldIcon } from '../components/Icons';
 import { getAllShipmentsAdmin, advanceShipmentStage } from '../services/api';
 
-const STAGE_OPTIONS = ['ORIGIN', 'TRANSIT', 'AT_PORT', 'CUSTOMS', 'DELIVERED'] as const;
+const STAGE_OPTIONS = [
+    'ORDER_CREATED', 'SUPPLIER_CONFIRMED', 'SUPPLIER_PAID', 'AWAITING_PICKUP',
+    'COLLECTED', 'ORIGIN_WAREHOUSE', 'EXPORT_CUSTOMS', 'IN_TRANSIT',
+    'DESTINATION_PORT', 'IMPORT_CUSTOMS', 'WAREHOUSE', 'OUT_FOR_DELIVERY', 'DELIVERED',
+] as const;
 
 interface AdminShipment {
     id: string;
@@ -32,6 +36,10 @@ interface AdminShipment {
     goodsType: string;
     originPort: string;
     destinationPort: string;
+    quotationAmount?: number | null;
+    quotationCurrency?: string;
+    paymentStatus?: string;
+    amountPaid?: number | null;
 }
 
 function mapAdminShipment(raw: any): AdminShipment {
@@ -47,17 +55,34 @@ function mapAdminShipment(raw: any): AdminShipment {
         goodsType: raw.goodsType ?? '',
         originPort: raw.originPort ?? '',
         destinationPort: raw.destinationPort ?? '',
+        quotationAmount: raw.quotationAmount ?? null,
+        quotationCurrency: raw.quotationCurrency ?? 'GHS',
+        paymentStatus: raw.paymentStatus ?? 'PENDING',
+        amountPaid: raw.amountPaid ?? null,
     };
 }
 
 const STATUS_MAP: Record<string, { status: 'origin' | 'transit' | 'port' | 'customs' | 'delivered'; label: string }> = {
-    PENDING:    { status: 'origin',   label: 'Pending' },
-    ORIGIN:     { status: 'origin',   label: 'At Origin' },
-    TRANSIT:    { status: 'transit',  label: 'In Transit' },
-    AT_PORT:    { status: 'port',     label: 'At Port' },
-    CUSTOMS:    { status: 'customs',  label: 'At Customs' },
-    DELIVERED:  { status: 'delivered', label: 'Delivered' },
-    ARCHIVED:   { status: 'delivered', label: 'Archived' },
+    PENDING:         { status: 'origin',   label: 'Pending' },
+    PENDING_PAYMENT: { status: 'origin',   label: 'Pending Payment' },
+    ORDER_CREATED:   { status: 'origin',   label: 'Order Created' },
+    SUPPLIER_CONFIRMED: { status: 'origin', label: 'Supplier Confirmed' },
+    SUPPLIER_PAID:   { status: 'origin',   label: 'Supplier Paid' },
+    AWAITING_PICKUP: { status: 'origin',   label: 'Awaiting Pickup' },
+    COLLECTED:       { status: 'origin',   label: 'Collected' },
+    ORIGIN_WAREHOUSE:{ status: 'origin',   label: 'Origin Warehouse' },
+    EXPORT_CUSTOMS:  { status: 'customs',  label: 'Export Customs' },
+    IN_TRANSIT:      { status: 'transit',  label: 'In Transit' },
+    DESTINATION_PORT:{ status: 'port',     label: 'Destination Port' },
+    IMPORT_CUSTOMS:  { status: 'customs',  label: 'Import Customs' },
+    WAREHOUSE:       { status: 'customs',  label: 'Warehouse' },
+    OUT_FOR_DELIVERY:{ status: 'transit',  label: 'Out for Delivery' },
+    DELIVERED:       { status: 'delivered', label: 'Delivered' },
+    ARCHIVED:        { status: 'delivered', label: 'Archived' },
+    ORIGIN:          { status: 'origin',   label: 'At Origin' },
+    TRANSIT:         { status: 'transit',  label: 'In Transit' },
+    AT_PORT:         { status: 'port',     label: 'At Port' },
+    CUSTOMS:         { status: 'customs',  label: 'At Customs' },
 };
 
 export default function AdminDashboardScreen() {
@@ -251,6 +276,20 @@ export default function AdminDashboardScreen() {
                                     </Text>
                                 </View>
 
+                                {/* Payment info */}
+                                {ship.quotationAmount != null ? (
+                                    <View style={[s.paymentRow, { borderTopColor: colors.border }]}>
+                                        <Text style={[s.quotationText, { color: colors.text }]}>
+                                            {ship.quotationCurrency} {Number(ship.quotationAmount).toLocaleString()}
+                                        </Text>
+                                        <Text style={[s.paymentStatusBadge, {
+                                            color: ship.paymentStatus === 'PAID' ? colors.green : ship.paymentStatus === 'PARTIAL' ? colors.orange : colors.muted
+                                        }]}>
+                                            {ship.paymentStatus === 'PAID' ? 'Paid' : ship.paymentStatus === 'PARTIAL' ? 'Partial' : 'Unpaid'}
+                                        </Text>
+                                    </View>
+                                ) : null}
+
                                 {/* Action */}
                                 <TouchableOpacity
                                     style={[s.advanceBtn, { backgroundColor: colors.orange }]}
@@ -376,6 +415,18 @@ const s = StyleSheet.create({
     },
     userAvatar: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
     userName: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.xs, flex: 1 },
+
+    paymentRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingTop: 6,
+        paddingBottom: 8,
+        borderTopWidth: 1,
+        marginBottom: 8,
+    },
+    quotationText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.sm },
+    paymentStatusBadge: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.xs },
 
     advanceBtn: {
         borderRadius: Radius.pill,
