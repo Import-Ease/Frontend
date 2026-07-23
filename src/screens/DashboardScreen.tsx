@@ -184,54 +184,36 @@ export default function DashboardScreen() {
       return;
     }
 
-<<<<<<< ours
-    const shipment = backendShipments.find((s: any) => s.trackingId === shipmentId || s.id === shipmentId);
-    const amount = shipment?.quotationAmount != null ? Number(shipment.quotationAmount).toFixed(2) : '0.00';
-    const currency = shipment?.quotationCurrency || 'GHS';
+const shipment = backendShipments.find((s: any) => s.trackingId === shipmentId || s.id === shipmentId);
+const amount = shipment?.quotationAmount != null ? Number(shipment.quotationAmount).toFixed(2) : '0.00';
+const currency = shipment?.quotationCurrency || 'GHS';
 
-    try {
-      setPaying(true);
-      const result = await initializePayment(
-          {
-            payerEmail,
-            supplierName: 'ImportEase Supplier',
-            amount,
-            currency,
-          },
-          token,
-=======
-    try {
-      setPaying(true);
-      const result = await initializePayment(
-        {
-          payerEmail,
-          supplierName: 'ImportEase Supplier',
-          amount: '0.00',
-          currency: 'GHS',
-        },
-        token,
->>>>>>> theirs
-      );
+try {
+  setPaying(true);
+  const result = await initializePayment(
+    {
+      payerEmail,
+      supplierName: 'ImportEase Supplier',
+      amount,
+      currency,
+    },
+    token,
+  );
 
-      if (result?.authorizationUrl) {
-        await Linking.openURL(String(result.authorizationUrl));
-        Alert.alert(
-<<<<<<< ours
-            'Payment started',
-            `Paying ${currency} ${amount}. Complete the checkout in your browser. Once paid, ask an admin to mark this shipment as paid.`,
-=======
-          'Payment started',
-          'Complete the checkout in your browser. Once paid, ask an admin to advance this shipment status.',
->>>>>>> theirs
-        );
-      } else {
-        Alert.alert('Payment setup failed', 'The server did not return a checkout link.');
-      }
-    } catch (error: any) {
-      Alert.alert('Payment failed', error?.message || 'Unable to start payment right now.');
-    } finally {
-      setPaying(false);
-    }
+  if (result?.authorizationUrl) {
+    await Linking.openURL(String(result.authorizationUrl));
+    Alert.alert(
+      'Payment started',
+      `Paying ${currency} ${amount}. Complete the checkout in your browser. Once paid, ask an admin to mark this shipment as paid.`,
+    );
+  } else {
+    Alert.alert('Payment setup failed', 'The server did not return a checkout link.');
+  }
+} catch (error: any) {
+  Alert.alert('Payment failed', error?.message || 'Unable to start payment right now.');
+} finally {
+  setPaying(false);
+}
   };
 
   if (loading) {
