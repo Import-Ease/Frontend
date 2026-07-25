@@ -29,6 +29,7 @@ export interface Shipment {
   alert: ShipmentAlert | null;
   costs: ShipmentCosts;
   lastUpdate: string;
+  createdAt: string | null;
   rawStatus: string;
   productId: number | null;
   shippingMode: string | null;
@@ -178,6 +179,7 @@ export function mapBackendShipment(raw: any): Shipment {
     stageIndex: mapped.index,
     alert: deriveAlert(raw.status, raw.stages),
     costs: calcLandedCost(raw.weightKg),
+    createdAt: raw.createdAt ?? null,
     lastUpdate: formatDate(raw.createdAt),
     rawStatus: raw.status ?? 'PENDING',
     productId: raw.productId ?? null,

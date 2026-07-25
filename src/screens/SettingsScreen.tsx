@@ -299,7 +299,16 @@ export default function SettingsScreen() {
             {/* Recent shipments */}
             <View style={[s.recentCard, { backgroundColor: colors.card }]}>
               <Text style={[s.recentTitle, { color: colors.text }]}>Recent shipments</Text>
-              {shipments.slice(0, 5).map((ship) => (
+              {/* sort by most recent first */}
+              {[...shipments]
+                .sort((a, b) => {
+                  if (!a.createdAt && !b.createdAt) return 0;
+                  if (!a.createdAt) return 1;
+                  if (!b.createdAt) return -1;
+                  return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                })
+                .slice(0, 5)
+                .map((ship) => (
                 <View
                   key={ship.id}
                   style={[s.recentRow, { borderBottomColor: colors.border }]}

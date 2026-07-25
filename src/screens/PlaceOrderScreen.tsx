@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,7 +20,7 @@ import { useAppTheme, FontSize, Radius, Space, CardShadow } from '../theme';
 import { RootStackParamList } from '../types';
 import { Eyebrow, PrimaryButton } from '../components';
 import { ChevronLeftIcon, SearchIcon, InfoIcon } from '../components/Icons';
-import { createOrder } from '../services/api';
+import { createOrder, initializePayment } from '../services/api';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'PlaceOrder'>;
 type Route = RouteProp<RootStackParamList, 'PlaceOrder'>;
@@ -39,8 +40,36 @@ export default function PlaceOrderScreen() {
   const [destination, setDestination] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [submitting, setSubmitting] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   const getToken = () => (globalThis as any).__IMPORT_EASE_TOKEN__ as string | undefined;
+
+  const handlePayNow = async () => {
+    const token = getToken();
+    if (!token) return;
+    const qty = Number(quantity) || 1;
+    const amount = (productPrice * qty).toFixed(2);
+    const payerEmail = (globalThis as any).__IMPORT_EASE_EMAIL__ || 'importer@importease.com';
+    setPaying(true);
+    try {
+      const result = await initializePayment(
+        { payerEmail, supplierName: supplierName || 'ImportEase Supplier', amount, currency: 'GHS' },
+        token,
+      );
+      if (result?.authorizationUrl) {
+        await Linking.openURL(String(result.authorizationUrl));
+        Alert.alert(
+          'Payment started',
+          `Paying GHS ${amount}. Complete the checkout in your browser. An admin will confirm payment.`,
+        );
+      }
+      navigation.goBack();
+    } catch (error: any) {
+      Alert.alert('Payment failed', error?.message || 'Unable to start payment. You can pay later from Shipments.');
+    } finally {
+      setPaying(false);
+    }
+  };
 
   const handleSubmit = async () => {
     const token = getToken();
@@ -74,8 +103,11 @@ export default function PlaceOrderScreen() {
 
       Alert.alert(
         'Order placed',
-        'Your order has been created. You can pay for it later from your Shipments list.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }],
+        'Your order has been created. Would you like to pay now?',
+        [
+          { text: 'Pay Now', onPress: () => handlePayNow() },
+          { text: 'Later', onPress: () => navigation.goBack() },
+        ],
       );
     } catch (error: any) {
       Alert.alert('Order failed', error?.message || 'Unable to place order. Please try again.');
@@ -183,7 +215,7 @@ export default function PlaceOrderScreen() {
             <InfoIcon size={16} color={colors.green} />
           </View>
           <Text style={[s.noteText, { color: colors.textSoft }]}>
-            Payment happens later from your Shipments list. No payment required now.
+            You can pay right after placing your order. No payment required now.
           </Text>
         </View>
 
@@ -191,10 +223,10 @@ export default function PlaceOrderScreen() {
         <TouchableOpacity
           style={[s.submitButton, { backgroundColor: colors.green }]}
           onPress={handleSubmit}
-          disabled={submitting}
+          disabled={submitting || paying}
           activeOpacity={0.9}
         >
-          {submitting ? (
+          {submitting || paying ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
             <Text style={s.submitButtonText}>Place Order</Text>

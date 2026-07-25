@@ -16,7 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppTheme, FontSize, Radius, Space, CardShadow } from '../theme';
 import { RootStackParamList } from '../types';
-import { MailIcon, PhoneIcon, EyeIcon, EyeOffIcon, ShieldIcon } from '../components/Icons';
+import { MailIcon, PhoneIcon, EyeIcon, EyeOffIcon } from '../components/Icons';
 import { loginUser, registerUser } from '../services/api';
 import { saveAuthState } from '../services/storage';
 
@@ -158,15 +158,7 @@ export default function LoginScreen() {
                         </TouchableOpacity>
                     </View>
 
-                    {/* ── Admin entry ── */}
-                    <TouchableOpacity
-                        style={[styles.adminBtn, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
-                        onPress={() => navigation.navigate('AdminLogin')}
-                        activeOpacity={0.7}
-                    >
-                        <ShieldIcon size={14} color={colors.orange} />
-                        <Text style={[styles.adminBtnText, { color: colors.orange }]}>Admin</Text>
-                    </TouchableOpacity>
+                    
 
                     {/* ── Form card ── */}
                     <View style={[styles.card, { backgroundColor: colors.card }]}>
@@ -397,18 +389,6 @@ const styles = StyleSheet.create({
     },
     modeBtn: { flex: 1, paddingVertical: 10, borderRadius: Radius.pill, alignItems: 'center' },
     modeBtnText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.sm },
-
-    adminBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-        borderRadius: Radius.pill,
-        paddingVertical: 9,
-        marginBottom: Space.lg,
-        borderWidth: 1,
-    },
-    adminBtnText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.xs, letterSpacing: 0.3 },
 
     card: { borderRadius: Radius.lg, padding: Space.md, marginBottom: Space.md, ...CardShadow },
 

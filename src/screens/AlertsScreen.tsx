@@ -6,8 +6,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useAppTheme, FontSize, Radius, Space, CardShadow } from '../theme';
 import { RootStackParamList, Shipment, mapBackendShipment } from '../types';
-import { Eyebrow, PrimaryButton, StatusBadge } from '../components';
-import { AlertTriangleIcon, InfoIcon, CheckCircleIcon, ShieldIcon } from '../components/Icons';
+import { Eyebrow, PrimaryButton } from '../components';
+import { CheckCircleIcon, ShieldIcon } from '../components/Icons';
 import { fetchShipments } from '../services/api';
 
 interface EngineStat {
@@ -89,30 +89,19 @@ export default function AlertsScreen() {
           ) : (
               alertShipments.map((ship) => {
                 if (!ship.alert) return null;
-                const isWarn = ship.alert.type === 'warning';
-                const tone = isWarn ? colors.green : colors.cobalt;
-                const toneDim = isWarn ? colors.greenDim : colors.cobaltDim;
+                const tone = colors.cobalt;
+                const toneDim = colors.cobaltDim;
                 return (
-                    <View key={ship.id} style={[s.alertCard, { backgroundColor: colors.card, borderLeftWidth: 3, borderLeftColor: tone }]}>
+                    <View key={ship.id} style={[s.alertCard, { backgroundColor: colors.card }]}>
                       <View style={s.alertTop}>
-                        <View style={{ flex: 1 }}>
-                          <View style={s.alertIdRow}>
-                            {isWarn ? (
-                              <AlertTriangleIcon size={16} color={tone} />
-                            ) : (
-                              <InfoIcon size={16} color={tone} />
-                            )}
-                            <Eyebrow color={colors.navy}>{ship.id}</Eyebrow>
-                          </View>
-                          <Text style={[s.alertDesc, { color: colors.text }]}>{ship.description}</Text>
-                          <StatusBadge status={ship.status} label={ship.statusLabel} />
-                        </View>
-                        <Text style={[s.alertTime, { color: colors.caption }]}>{ship.lastUpdate}</Text>
+                        <Text style={[s.alertDesc, { color: colors.text }]}>{ship.description}</Text>
                       </View>
 
                       <View style={[s.alertMsgBox, { backgroundColor: toneDim }]}>
                         <Text style={[s.alertMsg, { color: colors.textSoft }]}>{ship.alert.msg}</Text>
                       </View>
+
+                      <Text style={[s.alertTime, { color: colors.caption }]}>{ship.lastUpdate}</Text>
 
                       <View style={{ flexDirection: 'row', marginTop: Space.md }}>
                         <PrimaryButton label="Mark resolved" color={tone} />
