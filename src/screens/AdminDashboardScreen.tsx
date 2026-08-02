@@ -17,6 +17,7 @@ import { RootStackParamList } from '../types';
 import { StatusBadge } from '../components';
 import { ChevronLeftIcon, LogoutIcon, TruckIcon, UserIcon, CheckIcon, ShieldIcon } from '../components/Icons';
 import { getAllShipmentsAdmin, advanceShipmentStage } from '../services/api';
+import { clearAuthState } from '../services/storage';
 
 const STAGE_OPTIONS = [
     'ORDER_CREATED', 'SUPPLIER_CONFIRMED', 'SUPPLIER_PAID', 'AWAITING_PICKUP',
@@ -163,6 +164,7 @@ export default function AdminDashboardScreen() {
                 style: 'destructive',
                 onPress: () => {
                     (globalThis as any).__IMPORT_EASE_ADMIN_TOKEN__ = undefined;
+                    clearAuthState();
                     navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
                 },
             },

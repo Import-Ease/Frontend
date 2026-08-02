@@ -17,7 +17,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { useAppTheme, FontSize, Radius, Space, CardShadow } from '../theme';
 import { RootStackParamList } from '../types';
 import { Eyebrow } from '../components';
-import { SearchIcon, PhoneIcon, ChevronLeftIcon, StarIcon } from '../components/Icons';
+import { SearchIcon, PhoneIcon, ChevronLeftIcon, StarIcon, CheckBadgeIcon } from '../components/Icons';
 import { getProductById, fetchReviewsByProduct } from '../services/api';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ProductDetail'>;
@@ -145,25 +145,44 @@ export default function ProductDetailScreen() {
           ) : null}
         </View>
 
-        {/* Supplier Info */}
-        {(supplierName || supplierPhone || supplierEmail) && (
-          <View style={[s.infoCard, { backgroundColor: colors.card }]}>
-            <Eyebrow color={colors.navy}>Supplier</Eyebrow>
-            {supplierName ? (
-              <Text style={[s.supplierName, { color: colors.text }]}>{supplierName}</Text>
-            ) : null}
-            {supplierPhone ? (
-              <View style={s.contactRow}>
-                <PhoneIcon size={14} color={colors.caption} />
-                <Text style={[s.contactText, { color: colors.muted }]}>{supplierPhone}</Text>
+        {/* Supplier Card */}
+        {(supplierName || product?.supplier) && (
+          <TouchableOpacity
+            style={[s.supplierCard, { backgroundColor: colors.card }]}
+            activeOpacity={0.85}
+            onPress={() => {
+              const supplierId = product?.supplier?.id;
+              if (supplierId) {
+                navigation.navigate('PublicSupplier', { supplierId });
+              }
+            }}
+          >
+            <View style={s.supplierCardHeader}>
+              <View style={[s.supplierAvatar, { backgroundColor: colors.navyDim }]}>
+                <Text style={[s.supplierAvatarText, { color: colors.navy }]}>
+                  {(supplierName || 'S').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
+                </Text>
               </View>
-            ) : null}
-            {supplierEmail ? (
-              <View style={s.contactRow}>
-                <Text style={[s.contactText, { color: colors.muted }]}>{supplierEmail}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.supplierName, { color: colors.text }]}>{supplierName}</Text>
+                {product?.supplier?.shippingOrigin && (
+                  <Text style={[s.supplierOrigin, { color: colors.muted }]}>
+                    {product.supplier.shippingOrigin}
+                  </Text>
+                )}
+                {product?.supplier?.subscriptionTier === 'PAID' && (
+                  <View style={s.verifiedRow}>
+                    <CheckBadgeIcon size={12} color={colors.green} />
+                    <Text style={[s.verifiedText, { color: colors.green }]}>Verified Supplier</Text>
+                  </View>
+                )}
               </View>
-            ) : null}
-          </View>
+              <Text style={[s.viewSupplierArrow, { color: colors.cobalt }]}>{'>'}</Text>
+            </View>
+            <View style={s.supplierCardFooter}>
+              <Text style={[s.viewSupplierLabel, { color: colors.cobalt }]}>View Supplier Profile</Text>
+            </View>
+          </TouchableOpacity>
         )}
 
         {/* Reviews */}
@@ -248,7 +267,20 @@ const s = StyleSheet.create({
 
   description: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.sm, lineHeight: 20, marginTop: Space.sm },
 
-  supplierName: { fontFamily: 'Poppins_600SemiBold', fontSize: FontSize.md, marginTop: Space.sm, marginBottom: 4 },
+  supplierCard: {
+    marginHorizontal: Space.lg, marginTop: Space.md, borderRadius: Radius.lg,
+    padding: Space.md, ...CardShadow,
+  },
+  supplierCardHeader: { flexDirection: 'row', alignItems: 'center', gap: Space.sm },
+  supplierAvatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  supplierAvatarText: { fontFamily: 'Poppins_700Bold', fontSize: FontSize.md },
+  supplierName: { fontFamily: 'Poppins_600SemiBold', fontSize: FontSize.md, marginBottom: 2 },
+  supplierOrigin: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.xs },
+  verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
+  verifiedText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.xs },
+  viewSupplierArrow: { fontFamily: 'Poppins_700Bold', fontSize: FontSize.lg },
+  supplierCardFooter: { borderTopWidth: 0.5, borderTopColor: '#E0E0E0', marginTop: Space.sm, paddingTop: Space.sm, alignItems: 'center' },
+  viewSupplierLabel: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.sm },
   contactRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
   contactText: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.sm },
 

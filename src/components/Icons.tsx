@@ -413,6 +413,25 @@ export function ClipboardIcon({ size = defaults.size, color = defaults.color, st
   );
 }
 
+/* ── PENCIL (Edit) ──────────────────────────────────── */
+export function PencilIcon({ size = defaults.size, color = defaults.color, strokeWidth = defaults.strokeWidth }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+    </Svg>
+  );
+}
+
+/* ── CHECK BADGE (Verified) ───────────────────────── */
+export function CheckBadgeIcon({ size = defaults.size, color = defaults.color, strokeWidth = defaults.strokeWidth }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+      <Polyline points="22 4 12 14.01 9 11.01" />
+    </Svg>
+  );
+}
+
 /* ── X ─────────────────────────────────────────────── */
 export function XIcon({ size = defaults.size, color = defaults.color, strokeWidth = defaults.strokeWidth }: IconProps) {
   return (

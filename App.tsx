@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Linking, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -11,6 +11,7 @@ import { useAppTheme, LightColors, ThemeProvider } from './src/theme';
 import { MainTabParamList, RootStackParamList } from './src/types';
 import { PackageIcon, BellIcon, CalculatorIcon, GearIcon, SearchIcon, UserIcon } from './src/components/Icons';
 import { loadAuthState } from './src/services/storage';
+import { verifyPayment } from './src/services/api';
 import DashboardScreen from './src/screens/DashboardScreen';
 import AlertsScreen from './src/screens/AlertsScreen';
 import CostCalculatorScreen from './src/screens/CostCalculatorScreen';
@@ -26,6 +27,9 @@ import ProductDetailScreen from './src/screens/ProductDetailScreen';
 import PlaceOrderScreen from './src/screens/PlaceOrderScreen';
 import AdminUsersScreen from './src/screens/AdminUsersScreen';
 import AdminShipmentDetailScreen from './src/screens/AdminShipmentDetailScreen';
+import PublicSupplierScreen from './src/screens/PublicSupplierScreen';
+import ChangePasswordScreen from './src/screens/ChangePasswordScreen';
+import SalesReportScreen from './src/screens/SalesReportScreen';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -109,6 +113,7 @@ export default function App() {
     const { colors, isDark } = useAppTheme();
     const [authReady, setAuthReady] = useState(false);
     const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList>('Login');
+    const pendingUrl = useRef<string | null>(null);
 
     const [fontsLoaded] = useFonts({
         Poppins_600SemiBold,
@@ -116,6 +121,17 @@ export default function App() {
         Nunito_400Regular,
         Nunito_700Bold,
     });
+
+    const processDeepLink = useCallback((url: string) => {
+        if (!url) return;
+        const match = url.match(/[?&]reference=([^&]+)/);
+        const ref = match?.[1];
+        if (ref) {
+            verifyPayment(ref).then(() => {
+                Alert.alert('Payment confirmed', 'Your payment was successful.');
+            }).catch(() => {});
+        }
+    }, []);
 
     useEffect(() => {
         loadAuthState().finally(() => {
@@ -127,8 +143,33 @@ export default function App() {
                 setInitialRoute('Main');
             }
             setAuthReady(true);
+            if (pendingUrl.current) {
+                processDeepLink(pendingUrl.current);
+                pendingUrl.current = null;
+            }
         });
-    }, []);
+    }, [processDeepLink]);
+
+    useEffect(() => {
+        const handler = ({ url }: { url: string }) => {
+            if (authReady) {
+                processDeepLink(url);
+            } else {
+                pendingUrl.current = url;
+            }
+        };
+        Linking.getInitialURL().then((url) => {
+            if (url) {
+                if (authReady) {
+                    processDeepLink(url);
+                } else {
+                    pendingUrl.current = url;
+                }
+            }
+        });
+        const sub = Linking.addEventListener('url', handler);
+        return () => sub.remove();
+    }, [authReady, processDeepLink]);
 
     if (!fontsLoaded || !authReady) {
         return (
@@ -152,6 +193,9 @@ export default function App() {
                 <Stack.Screen name="PlaceOrder" component={PlaceOrderScreen} options={{ presentation: 'card' }} />
                 <Stack.Screen name="AdminUsers" component={AdminUsersScreen} options={{ presentation: 'card' }} />
                 <Stack.Screen name="AdminShipmentDetail" component={AdminShipmentDetailScreen} options={{ presentation: 'card' }} />
+                <Stack.Screen name="PublicSupplier" component={PublicSupplierScreen} options={{ presentation: 'card' }} />
+                <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ presentation: 'card' }} />
+                <Stack.Screen name="SalesReport" component={SalesReportScreen} options={{ presentation: 'card' }} />
             </Stack.Navigator>
         </NavigationContainer>
         </ThemeProvider>

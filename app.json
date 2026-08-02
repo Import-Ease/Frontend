@@ -3,6 +3,7 @@
     "name": "ImportEase",
     "slug": "importease",
     "version": "1.0.0",
+    "scheme": "importease",
     "orientation": "portrait",
     "icon": "./assets/logo.png",
     "userInterfaceStyle": "automatic",

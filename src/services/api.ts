@@ -86,6 +86,14 @@ export async function deleteMyAccount(password: string, token: string) {
   });
 }
 
+export async function changePassword(body: { currentPassword: string; newPassword: string; confirmPassword: string }, token: string) {
+  return request<any>('/api/users/change-password', {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  });
+}
+
 /* ── User Profile ─────────────────────────────────────── */
 
 export async function fetchUserProfile(token: string) {
@@ -337,11 +345,37 @@ export async function updateSupplierProfile(payload: any, token: string) {
 
 /* ── Supplier Products ───────────────────────────────── */
 
-export async function fetchMyProducts(token: string) {
-  return request<any[]>('/api/products/mine', {
+export interface SupplierDashEntry {
+  activeShipments: number;
+  pendingOrders: number;
+  completedDeliveries: number;
+  revenue: number;
+  recentOrders: any[];
+  productCount: number;
+}
+
+/** Map a raw backend Product entity row (`name`, `price`, `imageUrl`) into the frontend Product shape. */
+export function mapBackendProduct(raw: any): any {
+  if (!raw) return raw as any;
+  return {
+    ...raw,
+    id: raw.id != null ? String(raw.id) : raw.id,
+    productName: raw.productName ?? raw.name ?? '',
+    productPrice: raw.productPrice ?? (raw.price ?? 0),
+    imageUrl: raw.imageUrl ?? raw.image_url ?? '',
+    supplierName: raw.supplierName ?? raw.supplier?.name ?? '',
+    supplierContact: raw.supplierContact ?? raw.supplier?.phone ?? '',
+    supplierId: raw.supplierId ?? raw.supplier?.id ?? undefined,
+    supplier: raw.supplier ?? undefined,
+  };
+}
+
+export async function fetchMyProducts(token: string): Promise<any[]> {
+  const rows = await request<any[]>('/api/products/mine', {
     method: 'GET',
     headers: { Authorization: `Bearer ${token}` },
   });
+  return (Array.isArray(rows) ? rows : []).map(mapBackendProduct);
 }
 
 /* ── Supplier Subscription ──────────────────────────── */
@@ -364,6 +398,25 @@ export async function initiateSubscriptionUpgrade(token: string) {
       headers: { Authorization: `Bearer ${token}` },
     },
   );
+}
+
+/* ── Public Supplier ────────────────────────────────── */
+
+export async function fetchPublicSupplierProfile(id: number) {
+  return request<any>(`/api/suppliers/${id}/public`);
+}
+
+export async function fetchSupplierProducts(id: number) {
+  return request<any[]>(`/api/suppliers/${id}/products`);
+}
+
+/* ── Supplier Dashboard ────────────────────────────── */
+
+export async function fetchSupplierDashboard(token: string) {
+  return request<any>('/api/suppliers/me/dashboard', {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` },
+  });
 }
 
 /* ── Admin Documents ─────────────────────────────────── */
@@ -430,18 +483,32 @@ export async function addAdminShipmentCheckpoint(
 /* ── Supplier Products CRUD ─────────────────────────── */
 
 export async function createProduct(payload: any, token: string) {
+  const body = {
+    name: payload.productName,
+    description: payload.description || '',
+    price: Number(payload.productPrice),
+    quantity: Number(payload.quantity || 0),
+    imageUrl: payload.imageUrl || '',
+  };
   return request<any>('/api/products', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   });
 }
 
 export async function updateProduct(id: string, payload: any, token: string) {
+  const body = {
+    name: payload.productName,
+    description: payload.description || '',
+    price: Number(payload.productPrice),
+    quantity: Number(payload.quantity || 0),
+    imageUrl: payload.imageUrl || '',
+  };
   return request<any>(`/api/products/${id}`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   });
 }
 

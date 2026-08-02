@@ -191,6 +191,7 @@ export default function DashboardScreen() {
           supplierName: 'ImportEase Supplier',
           amount,
           currency,
+          shipmentId,
         },
         token,
       );
@@ -199,7 +200,7 @@ export default function DashboardScreen() {
         await Linking.openURL(String(result.authorizationUrl));
         Alert.alert(
           'Payment started',
-          `Paying ${currency} ${amount}. Complete the checkout in your browser. Once paid, ask an admin to mark this shipment as paid.`,
+          `Paying ${currency} ${amount}. Complete the checkout in your browser.`,
         );
       } else {
         Alert.alert('Payment setup failed', 'The server did not return a checkout link.');

@@ -41,6 +41,7 @@ export default function PlaceOrderScreen() {
   const [quantity, setQuantity] = useState('1');
   const [submitting, setSubmitting] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [lastOrderId, setLastOrderId] = useState<string | null>(null);
 
   const getToken = () => (globalThis as any).__IMPORT_EASE_TOKEN__ as string | undefined;
 
@@ -53,14 +54,14 @@ export default function PlaceOrderScreen() {
     setPaying(true);
     try {
       const result = await initializePayment(
-        { payerEmail, supplierName: supplierName || 'ImportEase Supplier', amount, currency: 'GHS' },
+        { payerEmail, supplierName: supplierName || 'ImportEase Supplier', amount, currency: 'GHS', shipmentId: lastOrderId },
         token,
       );
       if (result?.authorizationUrl) {
         await Linking.openURL(String(result.authorizationUrl));
         Alert.alert(
           'Payment started',
-          `Paying GHS ${amount}. Complete the checkout in your browser. An admin will confirm payment.`,
+          `Paying GHS ${amount}. Complete the checkout in your browser.`,
         );
       }
       navigation.goBack();
@@ -91,7 +92,7 @@ export default function PlaceOrderScreen() {
 
     try {
       setSubmitting(true);
-      await createOrder(
+      const orderResult = await createOrder(
         {
           productId: Number(productId),
           shippingMode,
@@ -100,6 +101,9 @@ export default function PlaceOrderScreen() {
         },
         token,
       );
+
+      const orderId = (orderResult as any)?.id || null;
+      setLastOrderId(orderId);
 
       Alert.alert(
         'Order placed',

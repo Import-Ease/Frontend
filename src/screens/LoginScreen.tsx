@@ -123,11 +123,16 @@ export default function LoginScreen() {
                 >
                     {/* ── Logo ── */}
                     <View style={styles.logoWrap}>
-                        <Image
-                            source={require('../../assets/logo.png')}
-                            style={styles.logo}
-                            resizeMode="contain"
-                        />
+                        <TouchableOpacity
+                            onLongPress={() => navigation.navigate('AdminLogin')}
+                            activeOpacity={1}
+                        >
+                            <Image
+                                source={require('../../assets/logo.png')}
+                                style={styles.logo}
+                                resizeMode="contain"
+                            />
+                        </TouchableOpacity>
                         <Text style={[styles.appName, { color: colors.navy }]}>
                             Import<Text style={{ color: colors.green }}>Ease</Text>
                         </Text>

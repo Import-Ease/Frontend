@@ -58,6 +58,9 @@ export type RootStackParamList = {
   AddShipment: undefined;
   ProductDetail: { productId: string; productName?: string };
   PlaceOrder: { productId: string; productName: string; productPrice: number; imageUrl: string; supplierName: string };
+  PublicSupplier: { supplierId: number };
+  ChangePassword: undefined;
+  SalesReport: undefined;
 };
 
 export type MainTabParamList = {
@@ -79,6 +82,20 @@ export interface Product {
   imageUrl: string;
   supplierName: string;
   supplierContact: string;
+  supplierId?: number;
+  supplier?: {
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+    address: string;
+    description: string;
+    logoUrl: string;
+    category: string;
+    shippingOrigin: string;
+    subscriptionTier: string;
+    createdAt: string;
+  };
 }
 
 export interface SupplierProfile {
