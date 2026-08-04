@@ -7,20 +7,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppTheme, FontSize, Radius, Space, CardShadow } from '../theme';
 import { RootStackParamList, Shipment, mapBackendShipment } from '../types';
 import { Eyebrow, PrimaryButton } from '../components';
-import { CheckCircleIcon, ShieldIcon } from '../components/Icons';
+import { CheckCircleIcon } from '../components/Icons';
 import { fetchShipments } from '../services/api';
-
-interface EngineStat {
-  label: string;
-  val: string;
-}
-
-const ENGINE_STATS: EngineStat[] = [
-  { label: 'Checks every', val: '15 min' },
-  { label: "We'll notify you within", val: '90 min' },
-  { label: 'Watching for', val: '7 kinds of delays' },
-  { label: 'Powered by', val: 'Smart rules' },
-];
 
 export default function AlertsScreen() {
   const { colors } = useAppTheme();
@@ -83,8 +71,7 @@ export default function AlertsScreen() {
                 <View style={[s.emptyIconWrap, { backgroundColor: colors.greenDim }]}>
                   <CheckCircleIcon size={40} color={colors.green} strokeWidth={1.5} />
                 </View>
-                <Text style={[s.emptyTitle, { color: colors.text }]}>All clear</Text>
-                <Text style={[s.emptyText, { color: colors.muted }]}>Every shipment is on track.</Text>
+                <Text style={[s.emptyTitle, { color: colors.text }]}>No alerts available.</Text>
               </View>
           ) : (
               alertShipments.map((ship) => {
@@ -111,28 +98,6 @@ export default function AlertsScreen() {
                 );
               })
           )}
-
-          {/* engine status panel */}
-          <View style={[s.enginePanel, { backgroundColor: colors.surfaceAlt }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: Space.md }}>
-              <View style={[s.engineIconWrap, { backgroundColor: colors.cobaltDim }]}>
-                <ShieldIcon size={16} color={colors.cobalt} />
-              </View>
-              <Text style={[s.engineTitle, { color: colors.textSoft }]}>How alerts work</Text>
-              <View style={[s.engineOnline, { backgroundColor: colors.greenDim }]}>
-                <View style={[s.onlineDot, { backgroundColor: colors.green }]} />
-                <Text style={[s.engineOnlineText, { color: colors.green }]}>Active</Text>
-              </View>
-            </View>
-            <View style={s.engineGrid}>
-              {ENGINE_STATS.map((r) => (
-                  <View key={r.label} style={s.engineStat}>
-                    <Eyebrow color={colors.muted}>{r.label}</Eyebrow>
-                    <Text style={[s.engineStatVal, { color: colors.text }]}>{r.val}</Text>
-                  </View>
-              ))}
-            </View>
-          </View>
         </ScrollView>
       </SafeAreaView>
   );
@@ -170,20 +135,6 @@ const s = StyleSheet.create({
   alertTime: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.xs, marginLeft: Space.sm },
   alertMsgBox: { borderRadius: Radius.sm, padding: Space.sm },
   alertMsg: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.sm, lineHeight: 19 },
-
-  enginePanel: {
-    borderRadius: Radius.lg,
-    padding: Space.md,
-    marginTop: Space.lg,
-  },
-  engineIconWrap: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  engineTitle: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.base, flex: 1 },
-  engineOnline: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.pill },
-  onlineDot: { width: 6, height: 6, borderRadius: 3 },
-  engineOnlineText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.xs },
-  engineGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, rowGap: 14 },
-  engineStat: { minWidth: '40%' },
-  engineStatVal: { fontFamily: 'Poppins_600SemiBold', fontSize: FontSize.base, marginTop: 3 },
 
   empty: { alignItems: 'center', paddingVertical: 60 },
   emptyIconWrap: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: Space.md },

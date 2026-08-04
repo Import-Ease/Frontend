@@ -12,7 +12,7 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppTheme, FontSize, Radius, Space, CardShadow } from '../theme';
 import { RootStackParamList } from '../types';
@@ -26,6 +26,8 @@ type Method = 'email' | 'phone';
 export default function LoginScreen() {
     const { colors } = useAppTheme();
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+    const route = useRoute<RouteProp<RootStackParamList, 'Login'>>();
+    const addAccount = route.params?.addAccount === true;
 
     const [mode, setMode] = useState<Mode>('login');
     const [method, setMethod] = useState<Method>('email');
@@ -85,11 +87,19 @@ export default function LoginScreen() {
                     username: authRes.username || username.trim(),
                     role: authRes.role || 'IMPORTER',
                 });
-                navigation.replace('Main');
+                if (addAccount) {
+                    navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+                } else {
+                    navigation.replace('Main');
+                }
             } else {
                 const emailAddr = isEmail ? email.trim() : `${phone.trim()}@importease.local`;
                 const displayName = name.trim() || emailAddr.split('@')[0];
                 const authRes = await registerUser(displayName, emailAddr, password.trim(), role);
+                if (authRes?.requiresVerification) {
+                    navigation.reset({ index: 0, routes: [{ name: 'VerifyOtp', params: { email: emailAddr } }] });
+                    return;
+                }
                 if (!authRes?.accessToken) {
                     Alert.alert('Signup failed', 'The server did not return a valid token.');
                     return;
@@ -104,7 +114,11 @@ export default function LoginScreen() {
                     username: displayName,
                     role: authRes.role || role,
                 });
-                navigation.replace('Main');
+                if (addAccount) {
+                    navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+                } else {
+                    navigation.replace('Main');
+                }
             }
         } catch (error: any) {
             Alert.alert('Error', error?.message || 'Something went wrong. Please try again.');
@@ -121,6 +135,17 @@ export default function LoginScreen() {
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                 >
+                    {/* Cancel — add account mode only */}
+                    {addAccount && (
+                        <TouchableOpacity
+                            onPress={() => navigation.goBack()}
+                            style={styles.cancelRow}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={[styles.cancelText, { color: colors.cobalt }]}>‹ Cancel</Text>
+                        </TouchableOpacity>
+                    )}
+
                     {/* ── Logo ── */}
                     <View style={styles.logoWrap}>
                         <TouchableOpacity
@@ -380,6 +405,9 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
     safe: { flex: 1 },
     scroll: { padding: Space.lg, paddingBottom: 40 },
+
+    cancelRow: { alignSelf: 'flex-start', paddingVertical: Space.sm, paddingRight: Space.sm, marginBottom: Space.xs },
+    cancelText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.base },
 
     logoWrap: { alignItems: 'center', paddingTop: Space.xl, paddingBottom: Space.lg },
     logo: { width: 90, height: 90, marginBottom: Space.sm },

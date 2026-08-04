@@ -134,13 +134,11 @@ export async function removeSavedAccount(account: StoredAccount): Promise<void> 
   await writeAccounts(accounts.filter((a) => a.token !== account.token));
 }
 
-/** Log out: clear the active session but keep other saved accounts. */
-export async function logoutCurrent(account?: StoredAccount): Promise<void> {
-  const g = globalThis as any;
-  const rec = account
-    ? account
-    : { token: g.__IMPORT_EASE_TOKEN__, username: g.__IMPORT_EASE_USERNAME__, email: g.__IMPORT_EASE_EMAIL__, role: g.__IMPORT_EASE_ROLE__ };
-  if (rec?.token) await removeSavedAccount(rec);
+/**
+ * Log out: clear the active session but keep ALL saved accounts so the user can
+ * switch back later. Only "Remove Account" deletes a saved account.
+ */
+export async function logoutCurrent(_account?: StoredAccount): Promise<void> {
   await AsyncStorage.multiRemove([KEYS.TOKEN, KEYS.USERNAME, KEYS.EMAIL, KEYS.ROLE]);
   setGlobalSession({ token: undefined, username: undefined, email: undefined, role: undefined });
 }

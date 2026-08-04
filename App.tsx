@@ -30,6 +30,7 @@ import AdminShipmentDetailScreen from './src/screens/AdminShipmentDetailScreen';
 import PublicSupplierScreen from './src/screens/PublicSupplierScreen';
 import ChangePasswordScreen from './src/screens/ChangePasswordScreen';
 import SalesReportScreen from './src/screens/SalesReportScreen';
+import VerifyOtpScreen from './src/screens/VerifyOtpScreen';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -185,6 +186,7 @@ export default function App() {
             <StatusBar style={isDark ? 'light' : 'dark'} />
             <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="Login" component={LoginScreen} />
+                <Stack.Screen name="VerifyOtp" component={VerifyOtpScreen} />
                 <Stack.Screen name="Main" component={MainTabs} />
                 <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
                 <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />

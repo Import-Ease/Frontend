@@ -76,6 +76,20 @@ export async function resetPassword(email: string, otpCode: string, newPassword:
   });
 }
 
+export async function verifyOtp(email: string, code: string) {
+  return request<any>('/api/auth/verify-otp', {
+    method: 'POST',
+    body: JSON.stringify({ identifier: email, otpCode: code }),
+  });
+}
+
+export async function resendOtp(email: string) {
+  return request<any>('/api/auth/resend-otp', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
 export async function deleteMyAccount(password: string, token: string) {
   const maskedToken = token ? `${token.substring(0, 10)}...` : '(empty)';
   console.log('[API] deleteMyAccount called', { tokenPreview: maskedToken, hasPassword: !!password });

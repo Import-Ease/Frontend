@@ -24,6 +24,7 @@ export default function SettingsScreen() {
   const isSupplier = role === 'SUPPLIER';
   const username = (globalThis as any).__IMPORT_EASE_USERNAME__ as string | undefined;
   const email = (globalThis as any).__IMPORT_EASE_EMAIL__ as string | undefined;
+  const currentToken = (globalThis as any).__IMPORT_EASE_TOKEN__ as string | undefined;
 
   const [loading, setLoading] = useState(true);
   const [shipments, setShipments] = useState<Shipment[]>([]);
@@ -304,30 +305,44 @@ export default function SettingsScreen() {
         )}
 
         {/* ── ACCOUNTS SECTION ─────────────────────── */}
-        {savedAccounts.length > 0 && (
-          <View style={[s.section, { backgroundColor: colors.card }]}>
-            <View style={[s.sectionHeader, { borderBottomColor: colors.border }]}>
-              <View style={[s.sectionIconWrap, { backgroundColor: colors.greenDim }]}>
-                <UserIcon size={14} color={colors.green} />
-              </View>
-              <Text style={[s.sectionTitle, { color: colors.green }]}>Accounts</Text>
+        <View style={[s.section, { backgroundColor: colors.card }]}>
+          <View style={[s.sectionHeader, { borderBottomColor: colors.border }]}>
+            <View style={[s.sectionIconWrap, { backgroundColor: colors.greenDim }]}>
+              <UserIcon size={14} color={colors.green} />
             </View>
-            {savedAccounts.map((acc, i) => {
-              const isActive = (globalThis as any).__IMPORT_EASE_TOKEN__ === acc.token;
-              return (
-                <View key={acc.token || i} style={s.row}>
-                  <View style={[s.avatar, { backgroundColor: isActive ? colors.greenDim : colors.orangeDim }]}>
-                    <Text style={[s.avatarText, { color: isActive ? colors.green : colors.orange }]}>
-                      {(acc.username || '?').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[s.rowLabel, { color: colors.text }]}>{acc.username || 'Account'}</Text>
-                    <Text style={[s.rowValue, { color: colors.muted }]} numberOfLines={1}>{acc.email || acc.role || 'Saved account'}</Text>
-                  </View>
-                  {isActive ? (
-                    <Text style={[s.rowHint, { color: colors.green }]}>Active</Text>
-                  ) : (
+            <Text style={[s.sectionTitle, { color: colors.green }]}>Accounts</Text>
+          </View>
+
+          <Text style={[s.accountsSub, { color: colors.muted }]}>Current Account</Text>
+          <View style={s.row}>
+            <View style={[s.avatar, { backgroundColor: colors.greenDim }]}>
+              <Text style={[s.avatarText, { color: colors.green }]}>
+                {(username || '?').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
+              </Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.rowLabel, { color: colors.text }]}>{username || 'Unknown user'}</Text>
+              <Text style={[s.rowValue, { color: colors.muted }]} numberOfLines={1}>{email || 'No email'}</Text>
+            </View>
+            <Text style={[s.rowHint, { color: colors.green }]}>Active</Text>
+          </View>
+
+          {savedAccounts.length > 1 && (
+            <>
+              <Text style={[s.accountsSub, { color: colors.muted }]}>Saved Accounts</Text>
+              {savedAccounts.filter((a) => a.token !== currentToken).map((acc, i) => {
+                const isActive = (globalThis as any).__IMPORT_EASE_TOKEN__ === acc.token;
+                return (
+                  <View key={acc.token || i} style={s.row}>
+                    <View style={[s.avatar, { backgroundColor: isActive ? colors.greenDim : colors.orangeDim }]}>
+                      <Text style={[s.avatarText, { color: isActive ? colors.green : colors.orange }]}>
+                        {(acc.username || '?').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[s.rowLabel, { color: colors.text }]}>{acc.username || 'Account'}</Text>
+                      <Text style={[s.rowValue, { color: colors.muted }]} numberOfLines={1}>{acc.email || acc.role || 'Saved account'}</Text>
+                    </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <TouchableOpacity onPress={() => handleSwitchAccount(acc)} activeOpacity={0.7}>
                         <Text style={[s.rowHint, { color: colors.cobalt }]}>Switch</Text>
@@ -336,12 +351,25 @@ export default function SettingsScreen() {
                         <Text style={[s.rowHint, { color: '#D94452' }]}>Remove</Text>
                       </TouchableOpacity>
                     </View>
-                  )}
-                </View>
-              );
-            })}
+                  </View>
+                );
+              })}
+            </>
+          )}
+
+          <View style={[s.addAccountRow, { borderTopWidth: 0.5, borderTopColor: colors.border }]}>
+            <TouchableOpacity
+              style={[s.addAccountBtn, { backgroundColor: colors.greenDim, opacity: savedAccounts.length >= 2 ? 0.5 : 1 }]}
+              onPress={() => navigation.navigate('Login', { addAccount: true })}
+              disabled={savedAccounts.length >= 2}
+              activeOpacity={0.8}
+            >
+              <Text style={[s.addAccountText, { color: colors.green }]}>
+                {savedAccounts.length >= 2 ? 'Maximum of 2 accounts' : '+ Add Account'}
+              </Text>
+            </TouchableOpacity>
           </View>
-        )}
+        </View>
 
         {/* ── APPEARANCE SECTION ───────────────────── */}
         <View style={[s.section, { backgroundColor: colors.card }]}>
@@ -494,6 +522,11 @@ const s = StyleSheet.create({
   rowValue: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.xs, marginTop: 1 },
   rowHint: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.xs },
   rowChevron: { fontFamily: 'Nunito_400Regular', fontSize: FontSize.base },
+
+  accountsSub: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.xs, letterSpacing: 0.3, textTransform: 'uppercase', paddingHorizontal: Space.md, paddingTop: Space.md, marginBottom: 2 },
+  addAccountRow: { paddingHorizontal: Space.md, paddingVertical: Space.sm },
+  addAccountBtn: { borderRadius: Radius.pill, alignItems: 'center', paddingVertical: 12 },
+  addAccountText: { fontFamily: 'Nunito_700Bold', fontSize: FontSize.sm },
 
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontFamily: 'Poppins_700Bold', fontSize: FontSize.md },

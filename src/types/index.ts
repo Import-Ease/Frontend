@@ -49,7 +49,8 @@ export interface ShipmentSummary {
 
 /** Navigation param lists, used with @react-navigation typed hooks. */
 export type RootStackParamList = {
-  Login: undefined;
+  Login: { addAccount?: boolean } | undefined;
+  VerifyOtp: { email: string };
   Main: undefined;
   AdminLogin: undefined;
   AdminDashboard: undefined;
